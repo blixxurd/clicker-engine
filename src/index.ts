@@ -1,0 +1,30 @@
+export type { Brand } from "./types/brand";
+export type { ResourceId, ItemId, TaskId, GeneratorId, UpgradeId, Quantity, RatePerSecond, Result, Ok, Err } from "./types/core";
+export { ok, err } from "./types/core";
+export { assert } from "./utils/assert";
+export type { GameState } from "./model/gameState";
+export { tick } from "./service/tick";
+export { Engine } from "./controller/Engine";
+export { tickWithEvents } from "./service/tickEvents";
+export type { EngineEvent, ResourceDeltaEvent, GeneratorPurchaseEvent, UpgradeAppliedEvent, InventoryAddedEvent, InventoryConsumedEvent, TickStartEvent, TickEndEvent, TaskUnlockedEvent, TaskCompletedEvent, TaskClaimedEvent } from "./core/events/types";
+export type { EventBus } from "./core/events/bus";
+export { createEventBus } from "./core/events/bus";
+export { createFixedStepLoop, type FixedStepLoop, type FixedStepLoopOptions } from "./adapters/loop/fixedStep";
+export type { ResourceDefinition, ResourceState } from "./model/resource";
+export type { GeneratorDefinition, GeneratorState, GeneratorOutput } from "./model/generator";
+export type { ItemDefinition, InventoryEntry } from "./model/item";
+export type { UpgradeDefinition, Modifier, ModifierScope, UpgradeState } from "./model/upgrade";
+export type { TaskDefinition, TaskInstance, TaskRequirement, TaskReward } from "./model/task";
+export * as inventory from "./service/inventory";
+export * as formatting from "./core/formatting/short";
+export { formatShort } from "./core/formatting/short";
+export * as bulk from "./core/math/bulk";
+export type { Registries, ResourceRegistry, GeneratorRegistry, ItemRegistry, UpgradeRegistry, TaskRegistry } from "./repo/registries";
+export { createInMemoryResourceRegistry, createInMemoryGeneratorRegistry, createInMemoryItemRegistry, createInMemoryUpgradeRegistry, createInMemoryTaskRegistry } from "./repo/registries";
+export { CURRENT_SCHEMA_VERSION, serialize, parse, applyOfflineProgress, parseWithOffline } from "./core/persistence";
+export { PersistenceError, InvalidJsonError, ValidationError, UnsupportedVersionError } from "./errors/PersistenceError";
+export { buyGenerator, type BuyGeneratorArgs, type BuyResult } from "./service/generators";
+export { applyUpgrade, type ApplyUpgradeArgs, type ApplyResult } from "./service/upgrades";
+export { evaluateTasks, claimTask } from "./service/tasks";
+
+
