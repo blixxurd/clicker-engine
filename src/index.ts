@@ -3,28 +3,40 @@ export type { ResourceId, ItemId, TaskId, GeneratorId, UpgradeId, Quantity, Rate
 export { ok, err } from "./types/core";
 export { assert } from "./utils/assert";
 export type { GameState } from "./model/gameState";
-export { tick } from "./service/tick";
+import { TickService as _TickService } from "./service/TickService";
+export { TickService } from "./service/TickService";
+export const tick = _TickService.tick;
+export const tickWithEvents = _TickService.tickWithEvents;
+export { TickRunner } from "./controller/TickRunner";
 export { Engine } from "./controller/Engine";
-export { tickWithEvents } from "./service/tickEvents";
-export type { EngineEvent, ResourceDeltaEvent, GeneratorPurchaseEvent, UpgradeAppliedEvent, InventoryAddedEvent, InventoryConsumedEvent, TickStartEvent, TickEndEvent, TaskUnlockedEvent, TaskCompletedEvent, TaskClaimedEvent } from "./core/events/types";
-export type { EventBus } from "./core/events/bus";
-export { createEventBus } from "./core/events/bus";
+// TickEventsProcessor merged into TickRunner
+export type { EngineEvent, ResourceDeltaEvent, GeneratorPurchaseEvent, UpgradeAppliedEvent, InventoryAddedEvent, InventoryConsumedEvent, TickStartEvent, TickEndEvent, TaskUnlockedEvent, TaskCompletedEvent, TaskClaimedEvent } from "./core/EventBus";
+export type { EventBus } from "./core/EventBus";
+export { createEventBus, InMemoryEventBus } from "./core/EventBus";
 export { createFixedStepLoop, type FixedStepLoop, type FixedStepLoopOptions } from "./adapters/loop/fixedStep";
 export type { ResourceDefinition, ResourceState } from "./model/resource";
 export type { GeneratorDefinition, GeneratorState, GeneratorOutput } from "./model/generator";
 export type { ItemDefinition, InventoryEntry } from "./model/item";
 export type { UpgradeDefinition, Modifier, ModifierScope, UpgradeState } from "./model/upgrade";
 export type { TaskDefinition, TaskInstance, TaskRequirement, TaskReward } from "./model/task";
-export * as inventory from "./service/inventory";
+export { InventoryManager } from "./controller/InventoryManager";
+export { InventoryService } from "./service/InventoryService";
+export { InventoryService as inventory } from "./service/InventoryService";
 export * as formatting from "./core/formatting/short";
 export { formatShort } from "./core/formatting/short";
 export * as bulk from "./core/math/bulk";
 export type { Registries, ResourceRegistry, GeneratorRegistry, ItemRegistry, UpgradeRegistry, TaskRegistry } from "./repo/registries";
+export { InMemoryRegistry, RegistriesContainer } from "./repo/registries";
 export { createInMemoryResourceRegistry, createInMemoryGeneratorRegistry, createInMemoryItemRegistry, createInMemoryUpgradeRegistry, createInMemoryTaskRegistry } from "./repo/registries";
 export { CURRENT_SCHEMA_VERSION, serialize, parse, applyOfflineProgress, parseWithOffline } from "./core/persistence";
 export { PersistenceError, InvalidJsonError, ValidationError, UnsupportedVersionError } from "./errors/PersistenceError";
-export { buyGenerator, type BuyGeneratorArgs, type BuyResult } from "./service/generators";
-export { applyUpgrade, type ApplyUpgradeArgs, type ApplyResult } from "./service/upgrades";
-export { evaluateTasks, claimTask } from "./service/tasks";
+export { Economy, type BuyGeneratorArgs, type ApplyUpgradeArgs } from "./controller/Economy";
+export { TaskManager } from "./controller/TaskManager";
+// Keep legacy pure service names by forwarding to controller statics
+export { TaskService } from "./service/TaskService";
+export { TaskService as tasks } from "./service/TaskService";
+export type { StateAccessor } from "./controller/StateAccessor";
+export { PersistenceManager, SystemClock, type Clock } from "./controller/PersistenceManager";
+export { Game } from "./controller/Game";
 
 

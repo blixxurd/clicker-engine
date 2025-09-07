@@ -1,9 +1,10 @@
-import type { ResourceId, GeneratorId, UpgradeId, ItemId, TaskId } from "../../types/core";
+import type { ResourceId, GeneratorId, UpgradeId, ItemId, TaskId } from "../types/core";
 
+// Domain event types
 export interface ResourceDeltaEvent {
   readonly type: "resourceDelta";
   readonly resourceId: ResourceId;
-  readonly delta: number; // applied change this tick or op
+  readonly delta: number;
 }
 
 export interface GeneratorPurchaseEvent {
@@ -71,3 +72,37 @@ export type EngineEvent =
   | TaskUnlockedEvent
   | TaskCompletedEvent
   | TaskClaimedEvent;
+
+// EventBus API
+export interface EventBus {
+  on<T extends EngineEvent["type"]>(type: T, handler: (event: Extract<EngineEvent, { type: T }>) => void): void;
+  off<T extends EngineEvent["type"]>(type: T, handler: (event: Extract<EngineEvent, { type: T }>) => void): void;
+  emit(event: EngineEvent): void;
+}
+
+export class InMemoryEventBus implements EventBus {
+  private readonly handlers = new Map<EngineEvent["type"], Set<(e: EngineEvent) => void>>();
+
+  public on<T extends EngineEvent["type"]>(type: T, handler: (event: Extract<EngineEvent, { type: T }>) => void): void {
+    let set = this.handlers.get(type);
+    if (!set) {
+      set = new Set();
+      this.handlers.set(type, set);
+    }
+    set.add(handler as (e: EngineEvent) => void);
+  }
+
+  public off<T extends EngineEvent["type"]>(type: T, handler: (event: Extract<EngineEvent, { type: T }>) => void): void {
+    this.handlers.get(type)?.delete(handler as (e: EngineEvent) => void);
+  }
+
+  public emit(event: EngineEvent): void {
+    this.handlers.get(event.type)?.forEach((h) => h(event));
+  }
+}
+
+export function createEventBus(): EventBus {
+  return new InMemoryEventBus();
+}
+
+

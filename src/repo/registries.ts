@@ -40,6 +40,32 @@ export interface Registries {
   readonly tasks?: TaskRegistry;
 }
 
+/** Generic in-memory registry for id→definition lookups. */
+export class InMemoryRegistry<Id extends string, Def extends { readonly id: Id }> {
+  private readonly map: Map<Id, Def>;
+  public constructor(defs: ReadonlyArray<Def>) {
+    this.map = new Map(defs.map((d) => [d.id, d] as const));
+  }
+  public get(id: Id): Def | undefined { return this.map.get(id); }
+  public all(): ReadonlyArray<Def> { return Array.from(this.map.values()); }
+}
+
+/** Container for all registries. */
+export class RegistriesContainer implements Registries {
+  public readonly resources: ResourceRegistry;
+  public readonly generators: GeneratorRegistry;
+  public readonly items: ItemRegistry;
+  public readonly upgrades?: UpgradeRegistry;
+  public readonly tasks?: TaskRegistry;
+  public constructor(args: Registries) {
+    this.resources = args.resources;
+    this.generators = args.generators;
+    this.items = args.items;
+    if (args.upgrades !== undefined) this.upgrades = args.upgrades;
+    if (args.tasks !== undefined) this.tasks = args.tasks;
+  }
+}
+
 /** Create a simple in-memory resource registry. */
 export function createInMemoryResourceRegistry(defs: ReadonlyArray<ResourceDefinition>): ResourceRegistry {
   const map = new Map<ResourceId, ResourceDefinition>(defs.map((d) => [d.id, d]));

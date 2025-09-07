@@ -1,0 +1,7 @@
+# documentation.js configuration
+# Reference: https://github.com/documentationjs/documentation/blob/master/docs/CONFIG.md
+
+documentExported: true
+shallow: true
+inferPrivate: '^_'
+sort: alpha

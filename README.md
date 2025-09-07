@@ -11,14 +11,12 @@ npm run build
 
 ```ts
 import {
-  Engine,
+  Game,
   type GameState,
   createInMemoryResourceRegistry,
   createInMemoryGeneratorRegistry,
   createInMemoryItemRegistry,
   createInMemoryUpgradeRegistry,
-  serialize,
-  parse,
   createFixedStepLoop,
 } from "clicker-game-engine";
 
@@ -37,12 +35,15 @@ const registries = {
   upgrades: createInMemoryUpgradeRegistry([]),
 };
 
-const engine = new Engine(initial, registries);
-engine.step(1);
+const game = new Game(initial, registries);
+game.step(1);
 
 // Loop adapter (fixed step)
-const loop = createFixedStepLoop(engine, { stepSeconds: 0.5 });
-loop.start();
+const loop = createFixedStepLoop({
+  start() { /* wrap Game if needed or use Engine directly */ },
+  stop() {},
+  isRunning() { return false; },
+} as any, { stepSeconds: 0.5 });
 ```
 
 ## Generators: outputs and pricing
@@ -61,53 +62,35 @@ createInMemoryGeneratorRegistry([
 ```
 - Purchase via controller:
 ```ts
-engine.buyGenerators({ generatorId: "miner" as any, mode: "10" });
+game.buyGenerators({ generatorId: "miner" as any, mode: "10" });
 ```
 
 ## EventBus and stepWithEvents
 - Subscribe to engine events:
 ```ts
-engine.events.on("resourceDelta", (e) => console.log(e));
-engine.events.on("tickStart", (e) => {});
+game.bus.on("resourceDelta", (e) => console.log(e));
+game.bus.on("tickStart", (e) => {});
 ```
-- `engine.stepWithEvents(dt)` publishes lifecycle and domain events.
+- `game.stepWithEvents(dt)` publishes lifecycle and domain events.
 
 ## Tasks/Quests
-- Define tasks via registry; engine evaluates unlocks and supports claiming rewards.
-```ts
-import { createInMemoryTaskRegistry, evaluateTasks } from "clicker-game-engine";
-// ... add tasks to registries and call engine.claimTask(taskId)
-```
+- Define tasks via registry; `game.claimTask(taskId)` handles rewards/state.
+- Pure usage: `TaskService.evaluate/claim(state, registries)`.
 
 ## Persistence
-- `serialize(state)` and `parse(json)` roundtrip GameState.
+- `serialize(state)` and `parse(json)` roundtrip GameState; `PersistenceManager` lives on `Game`.
 
 ## API surface (curated)
-- Engine
-  - constructor(state, registries)
-  - step(dtSeconds)
-  - stepWithEvents(dtSeconds)
-  - events (EventBus): on/off
-  - buyGenerators({ generatorId, mode })
-  - applyUpgrade(args)
+- Game (single touchpoint)
+  - step/stepWithEvents
+  - buyGenerators/applyUpgrade
   - addItems/consumeItems
-  - claimTask(taskId)
-- tick(state, dtSeconds, registries)
-- adapters
-  - createFixedStepLoop(engine, { stepSeconds, maxStepsPerTick?, intervalMs? })
-- registries
-  - createInMemoryResourceRegistry
-  - createInMemoryGeneratorRegistry
-  - createInMemoryItemRegistry
-  - createInMemoryUpgradeRegistry
-  - createInMemoryTaskRegistry
-- tasks
-  - evaluateTasks(state, registries)
-  - claimTask(state, taskId, registries)
-- inventory
-  - count/add/consume
-- persistence
-  - serialize/parse/CURRENT_SCHEMA_VERSION
+  - claimTask
+  - bus (EventBus)
+- Engine (orchestrator, alternative to Game forwards)
+- Services (pure): TickService, InventoryService, TaskService
+- Registries: in-memory helpers for definitions
+- tick/tickWithEvents: available via TickService
 
 ## Philosophy
 - Small, composable public API

@@ -10,8 +10,7 @@ import {
   createInMemoryItemRegistry,
   createInMemoryUpgradeRegistry,
   createInMemoryTaskRegistry,
-  evaluateTasks,
-  claimTask,
+  TaskService,
 } from "../../src";
 
 const res = (s: string): ResourceId => s as unknown as ResourceId;
@@ -40,11 +39,11 @@ describe("tasks", () => {
     };
 
     const s1: GameState = { version: 1, resources: [{ id: cash, amount: q(10) }], generators: [], inventory: [], upgrades: [], tasks: [] };
-    const eval1 = evaluateTasks(s1, registries);
+    const eval1 = TaskService.evaluate(s1, registries);
     expect(eval1.events.find((e) => e.type === "taskUnlocked")).toBeTruthy();
 
     const s2 = eval1.state;
-    const claim = claimTask(s2, tid("t1"), registries);
+    const claim = TaskService.claim(s2, tid("t1"), registries);
     expect(claim.events.find((e) => e.type === "taskClaimed")).toBeTruthy();
     expect((claim.state.resources[0]!.amount as unknown as number)).toBe(15);
   });

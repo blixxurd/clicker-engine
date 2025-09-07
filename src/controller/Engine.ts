@@ -1,14 +1,15 @@
 import type { GameState } from "../model/gameState";
-import { tick } from "../service/tick";
+import { TickRunner } from "./TickRunner";
 import type { Registries } from "../repo/registries";
-import { tickWithEvents } from "../service/tickEvents";
-import type { EngineEvent } from "../core/events/types";
-import { buyGenerator, type BuyGeneratorArgs } from "../service/generators";
-import { applyUpgrade, type ApplyUpgradeArgs } from "../service/upgrades";
-import { add as invAdd, consume as invConsume } from "../service/inventory";
-import type { EventBus } from "../core/events/bus";
-import { createEventBus } from "../core/events/bus";
-import { evaluateTasks, claimTask as svcClaimTask } from "../service/tasks";
+import type { EngineEvent, EventBus } from "../core/EventBus";
+import { Economy } from "./Economy";
+import type { BuyGeneratorArgs, ApplyUpgradeArgs } from "./Economy";
+import { InventoryManager } from "./InventoryManager";
+import { createEventBus } from "../core/EventBus";
+import { TaskManager } from "./TaskManager";
+import type { ItemId } from "../types/core";
+import type { TaskInstance } from "../model/task";
+import type { StateAccessor } from "./StateAccessor";
 
 /**
  * Engine is a thin imperative shell around pure services.
@@ -18,6 +19,11 @@ export class Engine {
   private _state: GameState;
   private readonly registries: Registries;
   private readonly bus: EventBus;
+  private readonly tickRunner: TickRunner;
+  private readonly economy: Economy;
+  private readonly inventory: InventoryManager;
+  private readonly tasks: TaskManager;
+  private readonly stateAccessor: StateAccessor;
 
   /**
    * Create a new Engine.
@@ -28,6 +34,14 @@ export class Engine {
     this._state = initialState;
     this.registries = registries;
     this.bus = createEventBus();
+    this.stateAccessor = {
+      getState: (): GameState => this._state,
+      setState: (next: GameState): void => { this._state = next; },
+    };
+    this.tickRunner = new TickRunner(this.stateAccessor, registries);
+    this.economy = new Economy(this.stateAccessor, registries);
+    this.inventory = new InventoryManager(this.stateAccessor, registries);
+    this.tasks = new TaskManager(this.stateAccessor, registries);
   }
 
   /** Current immutable state snapshot. */
@@ -45,65 +59,51 @@ export class Engine {
    * @param dtSeconds - Delta time in seconds.
    */
   public step(dtSeconds: number): void {
-    this._state = tick(this._state, dtSeconds, this.registries);
+    this.tickRunner.step(dtSeconds);
   }
 
   /**
    * Advance the simulation by dt seconds and publish emitted events.
    */
   public stepWithEvents(dtSeconds: number): ReadonlyArray<EngineEvent> {
-    const prod = tickWithEvents(this._state, dtSeconds, this.registries);
-    this._state = prod.state;
-    const taskEval = evaluateTasks(this._state, this.registries);
-    this._state = taskEval.state;
-    const events = [...prod.events, ...taskEval.events];
+    const eventsTick = this.tickRunner.stepWithEvents(dtSeconds);
+    const eventsTasks = this.tasks.evaluate();
+    const events = [...eventsTick, ...eventsTasks];
     events.forEach((e) => this.bus.emit(e));
     return events;
   }
 
   /** Buy generators; publish events. */
   public buyGenerators(args: BuyGeneratorArgs): ReadonlyArray<EngineEvent> {
-    const { state, events } = buyGenerator(this._state, args, this.registries);
-    this._state = state;
+    const events = this.economy.buyGenerators(args);
     events.forEach((e) => this.bus.emit(e));
     return events;
   }
 
   /** Apply an upgrade; publish events. */
   public applyUpgrade(args: ApplyUpgradeArgs): ReadonlyArray<EngineEvent> {
-    const { state, events } = applyUpgrade(this._state, args);
-    this._state = state;
+    const events = this.economy.applyUpgrade(args);
     events.forEach((e) => this.bus.emit(e));
     return events;
   }
 
   /** Add items to inventory and publish an event. */
-  public addItems(itemId: Parameters<typeof invAdd>[1], count: number): ReadonlyArray<EngineEvent> {
-    const nextInv = invAdd(this._state.inventory, itemId, count, this.registries.items);
-    this._state = { ...this._state, inventory: nextInv } as GameState;
-    const ev = { type: "inventoryAdded", itemId, count } as EngineEvent;
-    this.bus.emit(ev);
-    return [ev];
+  public addItems(itemId: ItemId, count: number): ReadonlyArray<EngineEvent> {
+    const events = this.inventory.add(itemId, count);
+    events.forEach((e) => this.bus.emit(e));
+    return events;
   }
 
   /** Consume items from inventory and publish an event. */
-  public consumeItems(itemId: Parameters<typeof invConsume>[1], count: number): ReadonlyArray<EngineEvent> {
-    const prev = this._state.inventory;
-    const nextInv = invConsume(prev, itemId, count);
-    const actuallyConsumed = prev.reduce((acc, e, i) => acc + (e.id === itemId ? e.count - (nextInv[i]?.count ?? 0) : 0), 0);
-    this._state = { ...this._state, inventory: nextInv } as GameState;
-    if (actuallyConsumed > 0) {
-      const ev = { type: "inventoryConsumed", itemId, count: actuallyConsumed } as EngineEvent;
-      this.bus.emit(ev);
-      return [ev];
-    }
-    return [];
+  public consumeItems(itemId: ItemId, count: number): ReadonlyArray<EngineEvent> {
+    const events = this.inventory.consume(itemId, count);
+    events.forEach((e) => this.bus.emit(e));
+    return events;
   }
 
   /** Claim a task; publish events. */
-  public claimTask(taskId: Parameters<typeof svcClaimTask>[1]): ReadonlyArray<EngineEvent> {
-    const { state, events } = svcClaimTask(this._state, taskId, this.registries);
-    this._state = state;
+  public claimTask(taskId: TaskInstance["id"]): ReadonlyArray<EngineEvent> {
+    const events = this.tasks.claim(taskId);
     events.forEach((e) => this.bus.emit(e));
     return events;
   }

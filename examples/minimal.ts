@@ -1,4 +1,4 @@
-import { Engine, type GameState, createInMemoryGeneratorRegistry, createInMemoryResourceRegistry, createInMemoryItemRegistry, createInMemoryUpgradeRegistry } from "../src";
+import { Game, type GameState, createInMemoryGeneratorRegistry, createInMemoryResourceRegistry, createInMemoryItemRegistry, createInMemoryUpgradeRegistry } from "../src";
 
 const initial: GameState = { resources: [], generators: [], inventory: [], upgrades: [], version: 1 };
 const registries = {
@@ -7,8 +7,8 @@ const registries = {
   items: createInMemoryItemRegistry([]),
   upgrades: createInMemoryUpgradeRegistry([]),
 };
-const engine = new Engine(initial, registries);
-engine.step(1);
-console.log("tick OK", engine.state.version);
+const game = new Game(initial, registries);
+game.step(1);
+console.log("tick OK", game.accessor.getState().version);
 
 

@@ -2,7 +2,7 @@ import type { GameState } from "../../model/gameState";
 import { SaveV1Schema, type SaveV1 } from "./schema";
 import { InvalidJsonError, UnsupportedVersionError, ValidationError } from "../../errors/PersistenceError";
 import type { ResourceId, GeneratorId, ItemId, UpgradeId, Quantity } from "../../types/core";
-import { tick } from "../../service/tick";
+import { TickService } from "../../service/TickService";
 import type { Registries } from "../../repo/registries";
 
 /** Schema version for saved files. */
@@ -95,7 +95,7 @@ export function parse(json: string): GameState {
 export function applyOfflineProgress(state: Readonly<GameState>, savedAtMs: number, nowMs: number, registries: Registries): GameState {
   const dt = Math.max(0, Math.floor((nowMs - savedAtMs) / 1000));
   if (dt === 0) return state as GameState;
-  return tick(state, dt, registries);
+  return TickService.tick(state, dt, registries);
 }
 
 /**
