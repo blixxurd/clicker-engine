@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  Engine,
+  Game,
   type GameState,
   createInMemoryResourceRegistry,
   createInMemoryGeneratorRegistry,
@@ -28,10 +28,10 @@ describe("controller ops events", () => {
       upgrades: createInMemoryUpgradeRegistry([]),
     };
     const s1: GameState = { version: 1, resources: [{ id: cash, amount: q(100) }], generators: [], inventory: [], upgrades: [] };
-    const engine = new Engine(s1, registries);
-    const events = engine.applyUpgrade({ upgradeId: u1, costResourceId: cash, cost: 30 });
-    expect(engine.state.upgrades[0]!.level).toBe(1);
-    expect((engine.state.resources[0]!.amount as unknown as number)).toBe(70);
+    const game = new Game(s1, registries);
+    const events = game.applyUpgrade({ upgradeId: u1, costResourceId: cash, cost: 30 });
+    expect(game.accessor.getState().upgrades[0]!.level).toBe(1);
+    expect((game.accessor.getState().resources[0]!.amount as unknown as number)).toBe(70);
     expect(events.find((e) => e.type === "upgradeApplied")).toBeTruthy();
   });
 
@@ -44,10 +44,10 @@ describe("controller ops events", () => {
       upgrades: createInMemoryUpgradeRegistry([]),
     };
     const s1: GameState = { version: 1, resources: [], generators: [], inventory: [], upgrades: [] };
-    const engine = new Engine(s1, registries);
-    const addEvents = engine.addItems(potion, 4);
+    const game = new Game(s1, registries);
+    const addEvents = game.addItems(potion, 4);
     expect(addEvents.find((e) => e.type === "inventoryAdded")).toBeTruthy();
-    const consumeEvents = engine.consumeItems(potion, 2);
+    const consumeEvents = game.consumeItems(potion, 2);
     expect(consumeEvents.find((e) => e.type === "inventoryConsumed")).toBeTruthy();
   });
 });

@@ -1,13 +1,20 @@
 /**
- * Fixed-step loop adapter for driving the Engine from a host scheduler.
+ * Fixed-step loop adapter for driving a tickable target from a host scheduler.
  * Handles backpressure by capping steps per host tick.
  */
-import type { Engine } from "../../controller/Engine";
+import type { EngineEvent } from "../../core/EventBus";
+
+export interface Tickable {
+  stepWithEvents(dtSeconds: number): ReadonlyArray<EngineEvent>;
+}
 
 export interface FixedStepLoopOptions {
-  readonly stepSeconds: number; // fixed dt per step
-  readonly maxStepsPerTick?: number; // backpressure cap per host tick
-  readonly intervalMs?: number; // scheduler cadence (default 16ms)
+  /** Fixed dt per step in seconds. */
+  readonly stepSeconds: number;
+  /** Backpressure cap per host tick (default 5). */
+  readonly maxStepsPerTick?: number;
+  /** Scheduler cadence (default 16ms). */
+  readonly intervalMs?: number;
 }
 
 export interface FixedStepLoop {
@@ -22,7 +29,7 @@ export interface FixedStepLoop {
  * const loop = createFixedStepLoop(engine, { stepSeconds: 0.5 });
  * loop.start();
  */
-export function createFixedStepLoop(engine: Engine, opts: FixedStepLoopOptions): FixedStepLoop {
+export function createFixedStepLoop(engine: Tickable, opts: FixedStepLoopOptions): FixedStepLoop {
   const stepSeconds = opts.stepSeconds;
   const maxSteps = opts.maxStepsPerTick ?? 5;
   const intervalMs = opts.intervalMs ?? 16;

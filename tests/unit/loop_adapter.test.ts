@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { Engine, type GameState, createInMemoryResourceRegistry, createInMemoryGeneratorRegistry, createInMemoryItemRegistry, createInMemoryUpgradeRegistry, type ResourceId, type GeneratorId, type Quantity, type RatePerSecond, createFixedStepLoop } from "../../src";
+import { Game, type GameState, createInMemoryResourceRegistry, createInMemoryGeneratorRegistry, createInMemoryItemRegistry, createInMemoryUpgradeRegistry, type ResourceId, type GeneratorId, type Quantity, type RatePerSecond, createFixedStepLoop } from "../../src";
 
 const res = (s: string): ResourceId => s as unknown as ResourceId;
 const gen = (s: string): GeneratorId => s as unknown as GeneratorId;
@@ -18,14 +18,14 @@ describe("fixed-step loop adapter", () => {
       upgrades: createInMemoryUpgradeRegistry([]),
     };
     const s1: GameState = { version: 1, resources: [{ id: ore, amount: q(0) }], generators: [{ id: miner, owned: 1 }], inventory: [], upgrades: [] };
-    const engine = new Engine(s1, registries);
-    const loop = createFixedStepLoop(engine, { stepSeconds: 0.5, maxStepsPerTick: 3, intervalMs: 50 });
+    const game = new Game(s1, registries);
+    const loop = createFixedStepLoop(game, { stepSeconds: 0.5, maxStepsPerTick: 3, intervalMs: 50 });
 
     loop.start();
     await vi.advanceTimersByTimeAsync(2000);
     loop.stop();
     vi.useRealTimers();
 
-    expect((engine.state.resources[0]!.amount as unknown as number)).toBeGreaterThan(0);
+    expect((game.accessor.getState().resources[0]!.amount as unknown as number)).toBeGreaterThan(0);
   });
 });

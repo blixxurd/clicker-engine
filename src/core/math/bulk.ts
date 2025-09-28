@@ -1,7 +1,11 @@
+/** Inputs for computing geometric purchase totals. */
 export interface BulkCostInput {
-  readonly baseCost: number; // initial cost for the next unit
-  readonly growth: number;   // per-purchase multiplier (>= 1)
-  readonly count: number;    // number of units to purchase
+  /** Initial cost for the next unit. */
+  readonly baseCost: number;
+  /** Per-purchase multiplier (>= 1). */
+  readonly growth: number;
+  /** Number of units to purchase. */
+  readonly count: number;
 }
 
 /** Sum of geometric series for total cost of buying `count` units. */
@@ -24,6 +28,7 @@ export function maxAffordable(currency: number, baseCost: number, growth: number
   return Math.max(0, n);
 }
 
+/** Purchase mode: fixed count or maximum affordable. */
 export type BulkMode = "1" | "10" | "100" | "max";
 
 /** Determine purchase count for mode and compute total cost. */

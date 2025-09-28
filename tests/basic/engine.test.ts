@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { Engine, tick, type GameState, createInMemoryGeneratorRegistry, createInMemoryResourceRegistry, createInMemoryItemRegistry, createInMemoryUpgradeRegistry } from "../../src";
+import { Game, tick, type GameState, createInMemoryGeneratorRegistry, createInMemoryResourceRegistry, createInMemoryItemRegistry, createInMemoryUpgradeRegistry } from "../../src";
 
-describe("Engine determinism (no-op)", () => {
+describe("Tick determinism (no-op)", () => {
   it("keeps state reference when no generators and dt=0", () => {
     const s1: GameState = { resources: [], generators: [], inventory: [], upgrades: [], version: 1 } as const;
     const registries = {
@@ -14,7 +14,7 @@ describe("Engine determinism (no-op)", () => {
     expect(s2).toBe(s1);
   });
 
-  it("Engine.step uses tick with registries and preserves state when no generators", () => {
+  it("Game.step uses tick with registries and preserves state when no generators", () => {
     const s1: GameState = { resources: [], generators: [], inventory: [], upgrades: [], version: 1 } as const;
     const registries = {
       resources: createInMemoryResourceRegistry([]),
@@ -22,9 +22,9 @@ describe("Engine determinism (no-op)", () => {
       items: createInMemoryItemRegistry([]),
       upgrades: createInMemoryUpgradeRegistry([]),
     };
-    const engine = new Engine(s1, registries);
-    engine.step(1);
-    expect(engine.state).toEqual(s1);
+    const game = new Game(s1, registries);
+    game.step(1);
+    expect(game.accessor.getState()).toEqual(s1);
   });
 });
 

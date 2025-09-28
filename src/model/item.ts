@@ -1,5 +1,6 @@
 import type { ItemId } from "../types/core";
 
+/** Classification for items. */
 export type ItemKind = "consumable" | "equip" | "quest" | "material";
 
 /** Item definition (static metadata). */

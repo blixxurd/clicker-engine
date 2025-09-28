@@ -7,12 +7,17 @@ import { TaskManager } from "./TaskManager";
 import { Economy } from "./Economy";
 import type { BuyGeneratorArgs, ApplyUpgradeArgs } from "./Economy";
 import { TickRunner } from "./TickRunner";
-import { Engine } from "./Engine";
 import type { ItemId } from "../types/core";
 import type { TaskInstance } from "../model/task";
 import { PersistenceManager, SystemClock, type Clock } from "./PersistenceManager";
 
-/** Game-scoped context bundling state, bus, and domain managers. */
+/**
+ * Game-scoped façade bundling state, event bus, and domain subsystems.
+ *
+ * Preferred high-level entrypoint for host apps. It wires up subsystems with a shared
+ * `StateAccessor`, enabling simple one-stop interactions (ticks, economy, inventory, tasks,
+ * persistence). For a thinner shell, see {@link Engine}.
+ */
 export class Game {
   public readonly accessor: StateAccessor;
   public readonly bus: EventBus;
@@ -34,11 +39,6 @@ export class Game {
     this.economy = new Economy(this.accessor, registries);
     this.tick = new TickRunner(this.accessor, registries);
     this.persistence = new PersistenceManager(this.accessor, registries, clock);
-  }
-
-  /** Create an Engine bound to this Game's state and registries. */
-  public createEngine(): Engine {
-    return new Engine(this.accessor.getState(), this['registriesForEngine']());
   }
 
   // Optional single-touchpoint forwards
@@ -78,11 +78,6 @@ export class Game {
     return events;
   }
 
-  // Expose registries to Engine creation without widening public API
-  private registriesForEngine(): Registries {
-    // Reconstruct registries references from subsystems (they all share the same ref)
-    return (this.tick as unknown as { registries: Registries }).registries;
-  }
 }
 
 

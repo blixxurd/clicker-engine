@@ -6,13 +6,22 @@ import type { EngineEvent } from "../core/EventBus";
 import { BaseSubsystem } from "./BaseSubsystem";
 
 /**
- * InventoryManager owns item operations and writes next state via StateAccessor.
+ * Coordinates inventory operations and writes next state via `StateAccessor`.
+ *
+ * Provides imperative APIs that return domain events; also exposes pure static helpers
+ * to support deterministic testing and reuse.
  */
 export class InventoryManager extends BaseSubsystem {
   public constructor(state: StateAccessor, registries: Registries) {
     super(state, registries);
   }
 
+  /**
+   * Add items into the inventory, respecting per-item stack limits.
+   * @param itemId - Item definition id from the registry.
+   * @param count - Number of items to add.
+   * @returns Event capturing the addition, or empty if no-op.
+   */
   public add(itemId: ItemId, count: number): ReadonlyArray<EngineEvent> {
     const curr = this.state.getState();
     const nextInv = InventoryManager.addPure(curr.inventory, itemId, count, this.registries.items);
@@ -20,6 +29,12 @@ export class InventoryManager extends BaseSubsystem {
     return [{ type: "inventoryAdded", itemId, count } as EngineEvent];
   }
 
+  /**
+   * Consume items from the inventory.
+   * @param itemId - Item definition id from the registry.
+   * @param count - Number of items to consume.
+   * @returns Event capturing the actual consumed count (may be less if insufficient), or empty if none.
+   */
   public consume(itemId: ItemId, count: number): ReadonlyArray<EngineEvent> {
     const curr = this.state.getState();
     const nextInv = InventoryManager.consumePure(curr.inventory, itemId, count);
@@ -31,17 +46,26 @@ export class InventoryManager extends BaseSubsystem {
     return [];
   }
 
+  /** Get the total count of a specific item across all stacks. */
   public count(itemId: ItemId): number {
     return InventoryManager.countPure(this.state.getState().inventory, itemId);
   }
 
   // Static pure variants used by services and other pure helpers
+  /** Pure count computation across inventory stacks. */
   public static countPure(inventory: ReadonlyArray<InventoryEntry>, id: ItemId): number {
     let total = 0;
     for (const e of inventory) if (e.id === id) total += e.count;
     return total;
   }
 
+  /**
+   * Pure addition that respects stack limits; returns a new inventory array.
+   * @param inventory - Current inventory snapshot.
+   * @param id - Item id to add.
+   * @param amount - Number of items to add.
+   * @param itemRegistry - Item registry to resolve stack limits.
+   */
   public static addPure(
     inventory: ReadonlyArray<InventoryEntry>,
     id: ItemId,
@@ -76,6 +100,12 @@ export class InventoryManager extends BaseSubsystem {
     return result;
   }
 
+  /**
+   * Pure consumption that removes from stacks left-to-right; returns a new inventory array.
+   * @param inventory - Current inventory snapshot.
+   * @param id - Item id to consume.
+   * @param amount - Number of items to remove.
+   */
   public static consumePure(
     inventory: ReadonlyArray<InventoryEntry>,
     id: ItemId,

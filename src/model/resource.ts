@@ -6,6 +6,7 @@ export interface ResourceDefinition {
   readonly hasCapacity?: boolean;
 }
 
+/** Resource state (dynamic). */
 export interface ResourceState {
   readonly id: ResourceId;
   readonly amount: Quantity;

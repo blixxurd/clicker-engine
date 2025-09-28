@@ -4,8 +4,14 @@ import type { Quantity, GeneratorId, ResourceId, ItemId } from "../types/core";
 import type { EngineEvent } from "../core/EventBus";
 import { InventoryService } from "./InventoryService";
 
-/** Stateless tick math and event production. */
+/**
+ * Stateless tick math and event production.
+ *
+ * Integrates generator outputs into resources/items and applies upgrade modifiers
+ * without mutating inputs. Also produces resource delta events for observability.
+ */
 export class TickService {
+  /** Advance the simulation by `dtSeconds` and return the next state. */
   public static tick(state: Readonly<GameState>, dtSeconds: number, registries: Registries): GameState {
     if (dtSeconds === 0) return state as GameState;
 
@@ -104,6 +110,7 @@ export class TickService {
     return next;
   }
 
+  /** Advance and return both next state and emitted events. */
   public static tickWithEvents(state: Readonly<GameState>, dtSeconds: number, registries: Registries): { state: GameState; events: ReadonlyArray<EngineEvent> } {
     const before = state.resources.map((r) => r.amount as unknown as number);
     const events: EngineEvent[] = [];

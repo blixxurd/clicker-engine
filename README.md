@@ -39,11 +39,7 @@ const game = new Game(initial, registries);
 game.step(1);
 
 // Loop adapter (fixed step)
-const loop = createFixedStepLoop({
-  start() { /* wrap Game if needed or use Engine directly */ },
-  stop() {},
-  isRunning() { return false; },
-} as any, { stepSeconds: 0.5 });
+const loop = createFixedStepLoop(game, { stepSeconds: 0.5 });
 ```
 
 ## Generators: outputs and pricing
@@ -87,15 +83,44 @@ game.bus.on("tickStart", (e) => {});
   - addItems/consumeItems
   - claimTask
   - bus (EventBus)
-- Engine (orchestrator, alternative to Game forwards)
+- Engine: removed. Use `Game` as the single touchpoint.
 - Services (pure): TickService, InventoryService, TaskService
 - Registries: in-memory helpers for definitions
 - tick/tickWithEvents: available via TickService
 
 ## Philosophy
-- Small, composable public API
-- Strict TypeScript types as public contract
-- Functional core, imperative shell
+- **Small, composable public API**: clear separation between orchestration (controllers) and pure logic (services).
+- **Strict TypeScript types are the public contract**: `strict`, branded types, no `any` in exported surfaces.
+- **Functional core, imperative shell**: services are pure/deterministic; controllers own state transitions and event emission.
+- **Single touchpoint DX**: `Game` forwards common actions; pure services remain available for functional workflows.
+
+## Architecture
+- **Controllers (stateful, orchestrate, emit events)**
+  - `Game`: composition container with `StateAccessor`, `EventBus`, managers/services; forwards `step`, `buy`, `apply`, `add/consume`, `claim`.
+  - `TickRunner`: drives ticks using `TickService`.
+  - `Economy`: domain ops for buys/upgrades.
+  - `InventoryManager`: stateful inventory operations (uses pure service under the hood as needed).
+  - `TaskManager`: stateful task evaluation and claiming (encapsulated helpers).
+  - `BaseSubsystem`: shared base holding `state` and `registries`.
+- **Services (stateless, pure)**
+  - `TickService`: `tick`, `tickWithEvents`.
+  - `InventoryService`: `add`, `consume`, `count`.
+  - `TaskService`: `evaluate`, `claim`.
+- **Registries**: in-memory helpers for definitions; `RegistriesContainer` for bundling.
+
+### Why this split?
+- Controllers express use-cases and sequencing; they are the only layer that mutates state or emits events.
+- Services isolate domain rules; they’re deterministic, easy to test, and reusable across controllers.
+- This design keeps hot paths allocation-light and maintains strict boundaries for clarity and testability.
+
+## Migration notes (from pre-0.2)
+- Removed legacy service functions (`service/*` adapters). Use controller methods or service classes directly:
+  - `tick`, `tickWithEvents` → `TickService.tick(state, dt, registries)` / `TickService.tickWithEvents(...)`.
+  - `inventory.add/consume/count` → `InventoryService.add/consume/count` or `Game.addItems/consumeItems`.
+  - `evaluateTasks/claimTask` → `TaskService.evaluate/claim` or `Game.claimTask`.
+- Introduced `Game` single-touchpoint API. `Engine` remains available; both expose the same operations.
+- `Economy` now owns buy/upgrade math; `BuyGeneratorArgs`/`ApplyUpgradeArgs` live in `controller/Economy.ts`.
+- Event bus moved to `core/EventBus.ts` and is class-based (`InMemoryEventBus`).
 
 ## Scripts
 - `check`: lint + test + build + typecheck

@@ -1,5 +1,8 @@
+/** Options for `formatShort`. */
 export interface FormatShortOptions {
-  readonly decimals?: number; // number of decimals to keep
+  /** Number of decimals to keep (default 2). */
+  readonly decimals?: number;
+  /** Whether to trim trailing zeros and a dangling decimal point (default true). */
   readonly trimTrailingZeros?: boolean;
 }
 
@@ -10,9 +13,7 @@ const UNITS = [
   { v: 1e3, s: "K" },
 ] as const;
 
-/**
- * Format a number using short scale suffixes (K, M, B, T). Falls back to scientific for >= 1e15 or < 1e-3.
- */
+/** Format a number using short scale suffixes (K, M, B, T). Falls back to scientific for >= 1e15 or < 1e-3. */
 export function formatShort(value: number, options: FormatShortOptions = {}): string {
   const { decimals = 2, trimTrailingZeros = true } = options;
   if (!Number.isFinite(value)) return String(value);

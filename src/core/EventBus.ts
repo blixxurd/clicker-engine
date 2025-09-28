@@ -1,6 +1,6 @@
 import type { ResourceId, GeneratorId, UpgradeId, ItemId, TaskId } from "../types/core";
 
-// Domain event types
+/** Domain event types emitted by the engine. */
 export interface ResourceDeltaEvent {
   readonly type: "resourceDelta";
   readonly resourceId: ResourceId;
@@ -61,6 +61,7 @@ export interface TaskClaimedEvent {
   readonly taskId: TaskId;
 }
 
+/** Union of all engine events. */
 export type EngineEvent =
   | ResourceDeltaEvent
   | GeneratorPurchaseEvent
@@ -73,7 +74,7 @@ export type EngineEvent =
   | TaskCompletedEvent
   | TaskClaimedEvent;
 
-// EventBus API
+/** Minimal pub/sub API used by the engine to publish events. */
 export interface EventBus {
   on<T extends EngineEvent["type"]>(type: T, handler: (event: Extract<EngineEvent, { type: T }>) => void): void;
   off<T extends EngineEvent["type"]>(type: T, handler: (event: Extract<EngineEvent, { type: T }>) => void): void;

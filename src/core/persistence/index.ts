@@ -22,7 +22,7 @@ function toSaveGame(state: Readonly<GameState>): SaveV1["game"] {
   };
 }
 
-/** Serialize a GameState to a JSON string (versioned schema). */
+/** Serialize a `GameState` to a JSON string (versioned schema). */
 export function serialize(state: Readonly<GameState>): string {
   const save: SaveV1 = {
     schemaVersion: CURRENT_SCHEMA_VERSION,
@@ -52,7 +52,7 @@ function q(n: number): Quantity {
   return n as unknown as Quantity;
 }
 
-/** Parse and validate a JSON string into a GameState. Throws typed errors. */
+/** Parse and validate a JSON string into a `GameState`. Throws typed errors. */
 export function parse(json: string): GameState {
   let raw: unknown;
   try {

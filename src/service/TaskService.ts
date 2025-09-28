@@ -15,6 +15,9 @@ export class TaskService {
     return defs?.get(id);
   }
 
+  /**
+   * Evaluate the task list to unlock tasks whose requirements are now met.
+   */
   public static evaluate(state: Readonly<GameState>, registries: Registries): { state: GameState; events: ReadonlyArray<EngineEvent> } {
     const defs = registries.tasks;
     if (!defs) return { state: state as GameState, events: [] };
@@ -56,6 +59,7 @@ export class TaskService {
     return { state: { ...state, tasks: next } as GameState, events };
   }
 
+  /** Determine if all requirements for a task are satisfied. */
   private static requirementsMet(state: Readonly<GameState>, def: TaskDefinition): boolean {
     for (const r of def.requirements) {
       if (r.kind === "resourceAtLeast") {
@@ -72,6 +76,9 @@ export class TaskService {
     return true;
   }
 
+  /**
+   * Claim a task's rewards if active; returns updated state and events.
+   */
   public static claim(state: Readonly<GameState>, taskId: TaskInstance["id"], registries: Registries): { state: GameState; events: ReadonlyArray<EngineEvent> } {
     const defs = registries.tasks;
     if (!defs) return { state: state as GameState, events: [] };

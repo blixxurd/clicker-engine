@@ -3,7 +3,7 @@ import type { Registries } from "../repo/registries";
 import { TickService } from "../service/TickService";
 import type { EngineEvent } from "../core/EventBus";
 
-/** Runs tick and tickWithEvents using held registries and StateAccessor. */
+/** Runs simulation ticks via `TickService` using held registries and `StateAccessor`. */
 export class TickRunner {
   private readonly state: StateAccessor;
   private readonly registries: Registries;
@@ -13,12 +13,14 @@ export class TickRunner {
     this.registries = registries;
   }
 
+  /** Advance the simulation by the provided delta time in seconds. */
   public step(dtSeconds: number): void {
     const curr = this.state.getState();
     const next = TickService.tick(curr, dtSeconds, this.registries);
     if (next !== curr) this.state.setState(next);
   }
 
+  /** Advance and return events emitted by this tick. */
   public stepWithEvents(dtSeconds: number): ReadonlyArray<EngineEvent> {
     const curr = this.state.getState();
     const { state, events } = TickService.tickWithEvents(curr, dtSeconds, this.registries);

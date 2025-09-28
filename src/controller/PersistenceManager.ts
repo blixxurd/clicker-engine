@@ -25,15 +25,26 @@ export class PersistenceManager {
     this.clock = clock;
   }
 
+  /**
+   * Serialize the current state to a JSON string.
+   */
   public serialize(): string {
     return doSerialize(this.state.getState());
   }
 
+  /**
+   * Parse a JSON string and replace the current state.
+   * @param json - Serialized state produced by {@link serialize}.
+   */
   public parse(json: string): void {
     const next = doParse(json);
     this.state.setState(next);
   }
 
+  /**
+   * Parse a JSON string and apply offline progress between the saved timestamp and now.
+   * @param json - Serialized state produced by {@link serialize}.
+   */
   public parseWithOffline(json: string): void {
     const now = this.clock.nowMs();
     const next: GameState = doParseWithOffline(json, now, this.registries);

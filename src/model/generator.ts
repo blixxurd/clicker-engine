@@ -5,6 +5,7 @@ export type GeneratorOutput =
   | { readonly kind: "resource"; readonly resourceId: ResourceId; readonly rate: RatePerSecond }
   | { readonly kind: "item"; readonly itemId: ItemId; readonly rate: RatePerSecond };
 
+/** Pricing parameters for buying generators. */
 export interface GeneratorPricing {
   readonly costResourceId: ResourceId;
   readonly baseCost: number;
@@ -18,6 +19,7 @@ export interface GeneratorDefinition {
   readonly pricing?: GeneratorPricing;
 }
 
+/** Owned generator state (dynamic). */
 export interface GeneratorState {
   readonly id: GeneratorId;
   readonly owned: number;

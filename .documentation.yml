@@ -1,7 +1,47 @@
 # documentation.js configuration
 # Reference: https://github.com/documentationjs/documentation/blob/master/docs/CONFIG.md
 
-documentExported: true
+documentExported: false
 shallow: true
 inferPrivate: '^_'
 sort: alpha
+projectName: Clicker Game Engine
+github: https://github.com/aaron/clicker-engine
+ignore:
+  - "src/types/brand.ts"
+
+# Organize docs by domain using a custom TOC of exported identifiers
+toc:
+  - name: Controllers
+    children:
+      - Game
+      - Engine
+      - TickRunner
+      - Economy
+      - InventoryManager
+      - TaskManager
+  - name: Services (Pure)
+    children:
+      - TickService
+      - InventoryService
+      - TaskService
+  # Events section omitted to avoid warnings for non-documented type-only exports
+  - name: Registries
+    children:
+      - Registries
+      - RegistriesContainer
+      - InMemoryRegistry
+      - createInMemoryResourceRegistry
+      - createInMemoryGeneratorRegistry
+      - createInMemoryItemRegistry
+      - createInMemoryUpgradeRegistry
+      - createInMemoryTaskRegistry
+  - name: Persistence
+    children:
+      - PersistenceManager
+      - SystemClock
+      - serialize
+      - parse
+      - applyOfflineProgress
+      - parseWithOffline
+      - CURRENT_SCHEMA_VERSION

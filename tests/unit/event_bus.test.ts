@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import {
-  Engine,
+  Game,
   type GameState,
   createInMemoryResourceRegistry,
   createInMemoryGeneratorRegistry,
@@ -17,7 +17,7 @@ const gen = (s: string): GeneratorId => s as unknown as GeneratorId;
 const q = (n: number): Quantity => n as unknown as Quantity;
 
 describe("EventBus", () => {
-  it("receives published events from Engine", () => {
+  it("receives published events from Game", () => {
     const ore = res("ore");
     const miner = gen("miner");
 
@@ -29,15 +29,15 @@ describe("EventBus", () => {
     };
 
     const s1: GameState = { version: 1, resources: [{ id: ore, amount: q(100) }], generators: [{ id: miner, owned: 0 }], inventory: [], upgrades: [] };
-    const engine = new Engine(s1, registries);
+    const game = new Game(s1, registries);
 
     const spyDelta = vi.fn();
     const spyStart = vi.fn();
-    engine.events.on("resourceDelta", (e) => spyDelta(e));
-    engine.events.on("tickStart", (e) => spyStart(e));
+    game.bus.on("resourceDelta", (e) => spyDelta(e));
+    game.bus.on("tickStart", (e) => spyStart(e));
 
-    engine.buyGenerators({ generatorId: miner, mode: "1" });
-    engine.stepWithEvents(5);
+    game.buyGenerators({ generatorId: miner, mode: "1" });
+    game.stepWithEvents(5);
 
     expect(spyStart).toHaveBeenCalled();
     expect(spyDelta).toHaveBeenCalled();

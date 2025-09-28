@@ -6,7 +6,7 @@ import type { GameState } from "../model/gameState";
 import type { Quantity } from "../types/core";
 import { InventoryManager } from "./InventoryManager";
 
-/** Manages task lifecycle and writes next state via StateAccessor. */
+/** Manages task lifecycle and writes next state via `StateAccessor`. */
 export class TaskManager {
   private readonly state: StateAccessor;
   private readonly registries: Registries;
@@ -23,6 +23,7 @@ export class TaskManager {
     return events;
   }
 
+  /** Attempt to claim and resolve rewards for a task instance. */
   public claim(taskId: TaskInstance["id"]): ReadonlyArray<EngineEvent> {
     const curr = this.state.getState();
     const { state, events } = TaskManager.claimPure(curr, taskId, this.registries);
@@ -38,6 +39,10 @@ export class TaskManager {
     return defs?.get(id);
   }
 
+  /**
+   * Pure evaluation to unlock tasks whose requirements are met.
+   * Returns new state and events or original state if nothing changes.
+   */
   public static evaluatePure(state: Readonly<GameState>, registries: Registries): { state: GameState; events: ReadonlyArray<EngineEvent> } {
     const defs = registries.tasks;
     if (!defs) return { state: state as GameState, events: [] };
@@ -79,6 +84,7 @@ export class TaskManager {
     return { state: { ...state, tasks: next } as GameState, events };
   }
 
+  /** Check if all requirements for a task definition are satisfied. */
   private static requirementsMet(state: Readonly<GameState>, def: TaskDefinition): boolean {
     for (const r of def.requirements) {
       if (r.kind === "resourceAtLeast") {
@@ -95,6 +101,9 @@ export class TaskManager {
     return true;
   }
 
+  /**
+   * Pure claim flow that grants rewards, updates instances, and emits events.
+   */
   public static claimPure(state: Readonly<GameState>, taskId: TaskInstance["id"], registries: Registries): { state: GameState; events: ReadonlyArray<EngineEvent> } {
     const defs = registries.tasks;
     if (!defs) return { state: state as GameState, events: [] };

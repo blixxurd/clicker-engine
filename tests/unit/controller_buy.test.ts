@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  Engine,
+  Game,
   type GameState,
   createInMemoryResourceRegistry,
   createInMemoryGeneratorRegistry,
@@ -15,7 +15,7 @@ const res = (s: string): ResourceId => s as unknown as ResourceId;
 const gen = (s: string): GeneratorId => s as unknown as GeneratorId;
 const q = (n: number): Quantity => n as unknown as Quantity;
 
-describe("Engine.buyGenerators", () => {
+describe("Game.buyGenerators", () => {
   it("deducts currency and increases owned, emitting events", () => {
     const ore = res("ore");
     const miner = gen("miner");
@@ -35,11 +35,11 @@ describe("Engine.buyGenerators", () => {
       upgrades: [],
     };
 
-    const engine = new Engine(s1, registries);
-    const events = engine.buyGenerators({ generatorId: miner, mode: "1" });
+    const game = new Game(s1, registries);
+    const events = game.buyGenerators({ generatorId: miner, mode: "1" });
 
-    expect(engine.state.generators[0]!.owned).toBe(1);
-    expect((engine.state.resources[0]!.amount as unknown as number)).toBeCloseTo(75, 9);
+    expect(game.accessor.getState().generators[0]!.owned).toBe(1);
+    expect((game.accessor.getState().resources[0]!.amount as unknown as number)).toBeCloseTo(75, 9);
     expect(events.find((e) => e.type === "generatorPurchase")).toBeTruthy();
   });
 });

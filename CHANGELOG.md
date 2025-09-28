@@ -19,3 +19,16 @@ All notable changes to this project will be documented in this file.
 - Loop adapter: fixed-step with backpressure
 - Generator pricing moved into registry (`GeneratorDefinition.pricing`); `Engine.buyGenerators` args simplified
 - README expanded; API docs regenerated
+
+## [0.2.0] - Controllers/Services split, single-touchpoint Game (breaking)
+- Introduced controller/service architecture split:
+  - Controllers (stateful): Game, TickRunner, Economy, InventoryManager, TaskManager.
+  - Services (pure): TickService, InventoryService, TaskService.
+- Event bus consolidated into `core/EventBus.ts` with `InMemoryEventBus` class + factory.
+- Added `BaseSubsystem` for controller cohesion.
+- Added `Game` single-touchpoint forwards (step/buy/apply/add/consume/claim).
+- Removed legacy service adapters: `service/tick`, `service/tickEvents`, `service/inventory`, `service/generators`, `service/upgrades`, `service/tasks`.
+- Removed top-level shims `tick`, `inventory`, `evaluateTasks/claimTask` in favor of services/controllers.
+- Migration: use `TickService`, `InventoryService`, `TaskService`, or `Game`.
+  - Removed `Engine` facade; use `Game` or `TickRunner` directly.
+  - `createFixedStepLoop` now accepts any object with `stepWithEvents(dt)` (e.g., `Game`).

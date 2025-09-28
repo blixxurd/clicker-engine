@@ -8,13 +8,21 @@ import { BaseSubsystem } from "./BaseSubsystem";
 import { planPurchase } from "../core/math/bulk";
 
 /**
- * Economy coordinates generator buys and upgrades; writes state via StateAccessor.
+ * Coordinates purchases and upgrades in the economy domain.
+ *
+ * Mutates the game state through `StateAccessor` after computing results via pure helpers.
+ * Public instance methods emit domain `EngineEvent`s to be published by higher layers.
  */
 export class Economy extends BaseSubsystem {
   public constructor(state: StateAccessor, registries: Registries) {
     super(state, registries);
   }
 
+  /**
+   * Buy one or more generators using the provided bulk mode and current currency.
+   * @param args - Purchase parameters.
+   * @returns Events describing the transaction (purchase and resource delta).
+   */
   public buyGenerators(args: BuyGeneratorArgs): ReadonlyArray<EngineEvent> {
     const curr = this.state.getState();
     const { state, events } = Economy.buyGeneratorPure(curr, args, this.registries);
@@ -22,6 +30,11 @@ export class Economy extends BaseSubsystem {
     return events;
   }
 
+  /**
+   * Apply a single upgrade if affordable.
+   * @param args - Upgrade parameters including cost and currency resource.
+   * @returns Events describing the upgrade and resource delta.
+   */
   public applyUpgrade(args: ApplyUpgradeArgs): ReadonlyArray<EngineEvent> {
     const curr = this.state.getState();
     const { state, events } = Economy.applyUpgradePure(curr, args);
@@ -33,6 +46,13 @@ export class Economy extends BaseSubsystem {
     return n as unknown as Quantity;
   }
 
+  /**
+   * Pure purchase logic used by controllers and tests.
+   * @param state - Current immutable `GameState`.
+   * @param args - Purchase parameters.
+   * @param registries - Access to generator definitions and pricing.
+   * @returns New state and events; returns original state if no-op.
+   */
   public static buyGeneratorPure(state: Readonly<GameState>, args: BuyGeneratorArgs, registries: Registries): { state: GameState; events: ReadonlyArray<EngineEvent> } {
     const def = registries.generators.get(args.generatorId);
     const pricing = def?.pricing;
@@ -53,6 +73,12 @@ export class Economy extends BaseSubsystem {
     return { state: next, events };
   }
 
+  /**
+   * Pure upgrade logic used by controllers and tests.
+   * @param state - Current immutable `GameState`.
+   * @param args - Upgrade parameters including explicit cost.
+   * @returns New state and events; returns original state if not affordable.
+   */
   public static applyUpgradePure(state: Readonly<GameState>, args: ApplyUpgradeArgs): { state: GameState; events: ReadonlyArray<EngineEvent> } {
     const { upgradeId, costResourceId, cost } = args;
     const resIdx = state.resources.findIndex((r) => r.id === costResourceId);
@@ -70,15 +96,22 @@ export class Economy extends BaseSubsystem {
     return { state: next, events };
   }
 
-  /** Arguments for purchasing generators. */
+  /**
+   * Arguments for purchasing generators.
+   *
+   * @remarks
+   * Exposed for consumers' typing convenience when calling {@link Economy.buyGenerators}.
+   */
   public static readonly BuyGeneratorArgs: undefined;
 }
 
+/** Purchase parameters for generators. */
 export interface BuyGeneratorArgs {
   readonly generatorId: GeneratorId;
   readonly mode: BulkMode;
 }
 
+/** Parameters for applying an upgrade. */
 export interface ApplyUpgradeArgs {
   readonly upgradeId: UpgradeId;
   readonly costResourceId: ResourceId;

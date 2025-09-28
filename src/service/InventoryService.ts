@@ -2,14 +2,22 @@ import type { InventoryEntry } from "../model/item";
 import type { ItemId } from "../types/core";
 import type { ItemRegistry } from "../repo/registries";
 
-/** Stateless, pure inventory operations. */
+/**
+ * Stateless, pure inventory operations.
+ *
+ * These helpers operate on immutable arrays and return new arrays without side effects.
+ */
 export class InventoryService {
+  /** Get the total count of a specific item across all stacks. */
   public static count(inventory: ReadonlyArray<InventoryEntry>, id: ItemId): number {
     let total = 0;
     for (const e of inventory) if (e.id === id) total += e.count;
     return total;
   }
 
+  /**
+   * Add items while respecting per-item stack limits; returns new inventory array.
+   */
   public static add(
     inventory: ReadonlyArray<InventoryEntry>,
     id: ItemId,
@@ -44,6 +52,9 @@ export class InventoryService {
     return result;
   }
 
+  /**
+   * Consume items left-to-right across stacks; returns new inventory array.
+   */
   public static consume(
     inventory: ReadonlyArray<InventoryEntry>,
     id: ItemId,

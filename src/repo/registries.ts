@@ -31,7 +31,7 @@ export interface TaskRegistry {
   all?(): ReadonlyArray<TaskDefinition>;
 }
 
-/** Bundled registries passed to services and Engine. */
+/** Bundled registries passed to services and controllers. */
 export interface Registries {
   readonly resources: ResourceRegistry;
   readonly generators: GeneratorRegistry;
