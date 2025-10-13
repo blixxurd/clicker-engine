@@ -1,6 +1,6 @@
 # Idle Clicker Engine
 
-> A TypeScript-first, framework-agnostic engine for building incremental/idle/clicker games. Deterministic, composable, and production-ready.
+> A TypeScript-first, framework-agnostic engine for building incremental/idle/clicker games. Deterministic, and composable.
 
 **Idle Clicker Engine** provides the core building blocks for idle games: resources, generators with cost scaling, items, upgrades, tasks, persistence with offline progress, and an event system for UI reactivity—all with strict TypeScript types and zero framework lock-in.
 
@@ -41,7 +41,7 @@ Building an idle game from scratch means reinventing:
 ## 📦 Installation
 
 ```bash
-npm install clicker-game-engine
+npm install @fidget/idle-engine
 ```
 
 **Requirements**: Node.js ≥ 18, TypeScript ≥ 5.4 (recommended)

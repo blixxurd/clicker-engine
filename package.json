@@ -1,17 +1,17 @@
 {
-  "name": "clicker-game-engine",
-  "version": "0.3.0",
+  "name": "@fidget/idle-engine",
+  "version": "0.4.0",
   "description": "TypeScript-first incremental/clicker engine library. Framework-agnostic, deterministic, and production-ready for building idle/clicker games.",
   "license": "MIT",
   "author": "Clicker Game Engine Contributors",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/clicker-game-engine.git"
+    "url": "git@github.com:blixxurd/clicker-engine.git"
   },
   "bugs": {
-    "url": "https://github.com/yourusername/clicker-game-engine/issues"
+    "url": "https://github.com/blixxurd/clicker-engine/issues"
   },
-  "homepage": "https://github.com/yourusername/clicker-game-engine#readme",
+  "homepage": "https://github.com/blixxurd/clicker-engine#readme",
   "keywords": [
     "clicker",
     "idle",
