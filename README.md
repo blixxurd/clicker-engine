@@ -1,8 +1,8 @@
-# Clicker Game Engine
+# Idle Clicker Engine
 
 > A TypeScript-first, framework-agnostic engine for building incremental/idle/clicker games. Deterministic, composable, and production-ready.
 
-**Clicker Game Engine** provides the core building blocks for idle games: resources, generators with cost scaling, items, upgrades, tasks, persistence with offline progress, and an event system for UI reactivity—all with strict TypeScript types and zero framework lock-in.
+**Idle Clicker Engine** provides the core building blocks for idle games: resources, generators with cost scaling, items, upgrades, tasks, persistence with offline progress, and an event system for UI reactivity—all with strict TypeScript types and zero framework lock-in.
 
 ---
 
@@ -34,7 +34,7 @@ Building an idle game from scratch means reinventing:
 - Event-driven UI updates
 - Modifier ordering and composition
 
-**Clicker Game Engine** gives you all of this out of the box with a clean, composable API. Focus on making your game unique instead of rebuilding the engine.
+**Idle Clicker Engine** gives you all of this out of the box with a clean, composable API. Focus on making your game unique instead of rebuilding the engine.
 
 ---
 
