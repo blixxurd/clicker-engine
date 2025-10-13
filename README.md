@@ -12,12 +12,13 @@
 
 ## ✨ Features
 
-- **🪙 Resources**: Continuous values that auto-generate over time
+- **🪙 Resources**: Continuous values that auto-generate over time (with optional capacity limits)
 - **⚙️ Generators**: Auto-producers with exponential cost scaling and multi-output support (resources or items)
 - **🎒 Items & Inventory**: Discrete, stackable items with 4 types: consumable, equip, quest, material
 - **⬆️ Upgrades & Modifiers**: Purchasable modifiers with multiplicative and additive effects on production
 - **📋 Tasks/Quests**: Unlockable progression system with requirements, rewards, and state tracking
 - **🛒 Bulk Buy**: Purchase 1, 10, 100, or max generators in a single transaction
+- **📊 Production Rates**: Query current production rates for all resources without advancing state
 - **🔢 Number Formatting**: Built-in short-scale formatting (K, M, B, T) with scientific notation fallback
 - **💾 Persistence**: JSON serialization, versioned save schemas, and offline progress calculation
 - **🔔 Event System**: Reactive event bus for UI integration (resource changes, purchases, task completion, etc.)
@@ -122,6 +123,30 @@ const initialState: GameState = {
   upgrades: [],
 };
 ```
+
+#### Resource Capacity
+
+Resources can optionally have a maximum capacity. When set, production will cap at the specified limit.
+
+```typescript
+const RES_ENERGY = "energy" as unknown as ResourceId;
+
+const initialState: GameState = {
+  version: 1,
+  resources: [
+    { 
+      id: RES_ENERGY, 
+      amount: 50 as unknown as Quantity,
+      capacity: 100 as unknown as Quantity  // Energy caps at 100
+    },
+  ],
+  generators: [],
+  inventory: [],
+  upgrades: [],
+};
+```
+
+Useful for resources like energy, stamina, or storage that have natural limits.
 
 ### Generators
 Generators produce resources or items at a specified rate per second. They have exponential cost scaling built-in.
@@ -322,6 +347,23 @@ game.bus.on("tickEnd", () => {
 const events = game.stepWithEvents(1);
 ```
 
+### Querying Production Rates
+
+Display "X per second" statistics without advancing the game state:
+
+```typescript
+// Get current production rates for all resources
+const rates = game.getProductionRates();
+
+rates.forEach((rate, resourceId) => {
+  console.log(`Producing ${rate.toFixed(2)} ${resourceId}/sec`);
+});
+
+// Example: Show in UI
+const goldRate = rates.get(RES_GOLD) ?? 0;
+displayText(`Gold: ${gold.toFixed(0)} (+${goldRate.toFixed(1)}/sec)`);
+```
+
 ### Persistence & Offline Progress
 
 ```typescript
@@ -385,6 +427,7 @@ Controllers orchestrate game operations, mutate state, and emit events:
 ### Services (Pure)
 Services contain pure game logic—deterministic, stateless, and easy to test:
 - **`TickService`**: Core tick simulation (resources production, modifiers)
+- **`EconomyService`**: Purchase logic, upgrades, resource transactions
 - **`InventoryService`**: Inventory math and validation
 - **`TaskService`**: Task requirement evaluation
 
@@ -443,6 +486,7 @@ class Game {
   // High-level operations
   step(dtSeconds: number): void;
   stepWithEvents(dtSeconds: number): ReadonlyArray<EngineEvent>;
+  getProductionRates(): Map<ResourceId, number>;
   
   // Economy operations
   buyGenerators(args: BuyGeneratorArgs): ReadonlyArray<EngineEvent>;
@@ -479,6 +523,7 @@ interface GameState {
   readonly generators: ReadonlyArray<GeneratorState>;
   readonly inventory: ReadonlyArray<InventoryEntry>;
   readonly upgrades: ReadonlyArray<UpgradeState>;
+  readonly tasks?: ReadonlyArray<TaskInstance>;
 }
 ```
 

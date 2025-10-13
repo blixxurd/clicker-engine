@@ -11,6 +11,77 @@ import { InventoryService } from "./InventoryService";
  * without mutating inputs. Also produces resource delta events for observability.
  */
 export class TickService {
+  /**
+   * Calculate current production rates for all resources without advancing state.
+   * Useful for displaying "X per second" production stats in UI.
+   * @param state - Current game state.
+   * @param registries - Game registries.
+   * @returns Map of resource IDs to their production rates per second.
+   */
+  public static calculateProductionRates(state: Readonly<GameState>, registries: Registries): Map<ResourceId, number> {
+    const rates = new Map<ResourceId, number>();
+    
+    // Precompute modifier aggregates
+    const genAdd = new Map<GeneratorId, number>();
+    const genMult = new Map<GeneratorId, number>();
+    const resAdd = new Map<ResourceId, number>();
+    const resMult = new Map<ResourceId, number>();
+
+    if (registries.upgrades && state.upgrades.length > 0) {
+      for (const u of state.upgrades) {
+        if (u.level <= 0) continue;
+        const def = registries.upgrades.get(u.id);
+        if (!def) continue;
+        for (const m of def.modifiers) {
+          if (m.type === "add") {
+            const value = (m.value as unknown as number) * u.level;
+            if (m.scope.kind === "generator") {
+              genAdd.set(m.scope.id, (genAdd.get(m.scope.id) ?? 0) + value);
+            } else {
+              resAdd.set(m.scope.id, (resAdd.get(m.scope.id) ?? 0) + value);
+            }
+          } else if (m.type === "mult") {
+            const factor = Math.pow(m.value, u.level);
+            if (m.scope.kind === "generator") {
+              genMult.set(m.scope.id, (genMult.get(m.scope.id) ?? 1) * factor);
+            } else {
+              resMult.set(m.scope.id, (resMult.get(m.scope.id) ?? 1) * factor);
+            }
+          }
+        }
+      }
+    }
+
+    // Calculate production from generators
+    for (const g of state.generators) {
+      if (g.owned <= 0) continue;
+      const def = registries.generators.get(g.id);
+      if (!def) continue;
+      const addG = genAdd.get(g.id) ?? 0;
+      const multG = genMult.get(g.id) ?? 1;
+      for (const out of def.produces) {
+        if (out.kind === "resource") {
+          const base = (out.rate as unknown as number);
+          const ratePerUnit = (base + addG) * multG;
+          const totalRate = ratePerUnit * g.owned;
+          rates.set(out.resourceId, (rates.get(out.resourceId) ?? 0) + totalRate);
+        }
+      }
+    }
+
+    // Apply resource-level modifiers
+    for (const r of state.resources) {
+      const currentRate = rates.get(r.id) ?? 0;
+      const addR = resAdd.get(r.id) ?? 0;
+      const multR = resMult.get(r.id) ?? 1;
+      const finalRate = (currentRate + addR) * multR;
+      if (finalRate !== 0) {
+        rates.set(r.id, finalRate);
+      }
+    }
+
+    return rates;
+  }
   /** Advance the simulation by `dtSeconds` and return the next state. */
   public static tick(state: Readonly<GameState>, dtSeconds: number, registries: Registries): GameState {
     if (dtSeconds === 0) return state as GameState;
@@ -86,7 +157,13 @@ export class TickService {
       const multR = resMult.get(rId) ?? 1;
       const finalRate = ((rates[i] ?? 0) + addR) * multR;
       if (finalRate !== 0) {
-        amounts[i] = ((amounts[i] as unknown as number) + finalRate * dtSeconds) as Quantity;
+        let newAmount = (amounts[i] as unknown as number) + finalRate * dtSeconds;
+        // Enforce capacity if defined
+        if (r.capacity !== undefined) {
+          const cap = r.capacity as unknown as number;
+          newAmount = Math.max(0, Math.min(newAmount, cap));
+        }
+        amounts[i] = newAmount as Quantity;
         changed = true;
       }
     }

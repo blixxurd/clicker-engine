@@ -12,7 +12,7 @@ import {
   createInMemoryResourceRegistry,
   createInMemoryGeneratorRegistry,
   createInMemoryUpgradeRegistry,
-  tick,
+  TickService,
 } from "../../src";
 
 const res = (s: string): ResourceId => s as unknown as ResourceId;
@@ -60,7 +60,7 @@ describe("upgrades modifier composition", () => {
     };
 
     // base=2, gAdd=1 → 3, gMult=2 → 6 per unit; owned=2 → 12; rAdd=3 → 15; rMult=3 → 45 per second
-    const s2 = tick(s1, 2, registries);
+    const s2 = TickService.tick(s1, 2, registries);
     expect((s2.resources[0]!.amount as unknown as number)).toBe(90);
   });
 });

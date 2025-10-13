@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
-  tick,
+  TickService,
   type GameState,
   type ResourceDefinition,
   type GeneratorDefinition,
@@ -45,7 +45,7 @@ describe("tick with generators produces resources", () => {
       upgrades: [],
     };
 
-    const s2 = tick(s1, 5, registries);
+    const s2 = TickService.tick(s1, 5, registries);
     expect((s2.resources[0]!.amount as unknown as number)).toBe(10);
   });
 });

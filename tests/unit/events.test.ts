@@ -7,7 +7,7 @@ import {
   createInMemoryGeneratorRegistry,
   createInMemoryItemRegistry,
   createInMemoryUpgradeRegistry,
-  tickWithEvents,
+  TickService,
   type ResourceId,
   type GeneratorId,
   type Quantity,
@@ -44,7 +44,7 @@ describe("events", () => {
       upgrades: [],
     };
 
-    const { state: s2, events } = tickWithEvents(s1, 4, registries);
+    const { state: s2, events } = TickService.tickWithEvents(s1, 4, registries);
     expect((s2.resources[0]!.amount as unknown as number)).toBe(24);
     expect(events.length).toBe(3);
     expect(events[0]).toMatchObject({ type: "tickStart", dtSeconds: 4 });

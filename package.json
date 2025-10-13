@@ -1,19 +1,47 @@
 {
   "name": "clicker-game-engine",
   "version": "0.3.0",
-  "description": "TypeScript-first incremental/clicker engine library",
+  "description": "TypeScript-first incremental/clicker engine library. Framework-agnostic, deterministic, and production-ready for building idle/clicker games.",
   "license": "MIT",
+  "author": "Clicker Game Engine Contributors",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/clicker-game-engine.git"
+  },
+  "bugs": {
+    "url": "https://github.com/yourusername/clicker-game-engine/issues"
+  },
+  "homepage": "https://github.com/yourusername/clicker-game-engine#readme",
+  "keywords": [
+    "clicker",
+    "idle",
+    "incremental",
+    "game",
+    "engine",
+    "typescript",
+    "game-engine",
+    "game-development",
+    "idle-game",
+    "incremental-game"
+  ],
   "type": "module",
   "main": "dist/index.cjs",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
     ".": {
+      "types": "./dist/index.d.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
     },
     "./package.json": "./package.json"
   },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
   "sideEffects": false,
   "scripts": {
     "build": "tsup",
@@ -21,9 +49,11 @@
     "lint": "eslint .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "check": "npm run lint && npm run test && npm run build && npm run typecheck",
-    "docs": "documentation build src/index.ts -f html -o docs/api"
+    "docs": "documentation build src/index.ts -f html -o docs/api",
+    "prepublishOnly": "npm run check"
   },
   "engines": {
     "node": ">=18"
@@ -32,6 +62,7 @@
     "@types/node": "^20.0.0",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",
+    "@vitest/coverage-v8": "^1.6.1",
     "documentation": "^14.0.0",
     "eslint": "^8.57.0",
     "eslint-config-prettier": "^9.0.0",
@@ -43,5 +74,3 @@
     "zod": "^3.23.8"
   }
 }
-
-

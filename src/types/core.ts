@@ -1,25 +1,34 @@
 import type { Brand } from "./brand";
 
-/** Public ID brands used across the engine. These provide nominal typing safety. */
+/**
+ * ID brands used internally for nominal typing safety.
+ * The public API accepts both branded and plain versions for better DX.
+ */
 export type ResourceId = Brand<string, "ResourceId">;
 export type ItemId = Brand<string, "ItemId">;
 export type TaskId = Brand<string, "TaskId">;
 export type GeneratorId = Brand<string, "GeneratorId">;
 export type UpgradeId = Brand<string, "UpgradeId">;
 
+/**
+ * Flexible ID types that accept both branded and plain versions.
+ * Use these for public API parameters.
+ */
+export type ResourceIdLike = ResourceId | string;
+export type ItemIdLike = ItemId | string;
+export type TaskIdLike = TaskId | string;
+export type GeneratorIdLike = GeneratorId | string;
+export type UpgradeIdLike = UpgradeId | string;
+
 /** Numeric brands for domain-specific quantities. */
 export type Quantity = Brand<number, "Quantity">;
 export type RatePerSecond = Brand<number, "RatePerSecond">;
 
-/** Minimal Result type for fallible operations. */
-export type Ok<T> = { readonly ok: true; readonly value: T };
-export type Err<E> = { readonly ok: false; readonly error: E };
-export type Result<T, E> = Ok<T> | Err<E>;
-
-/** Create a successful Result. */
-export const ok = <T>(value: T): Ok<T> => ({ ok: true, value });
-
-/** Create a failed Result. */
-export const err = <E>(error: E): Err<E> => ({ ok: false, error });
+/**
+ * Flexible numeric types that accept both branded and plain versions.
+ * Use these for public API parameters.
+ */
+export type QuantityLike = Quantity | number;
+export type RatePerSecondLike = RatePerSecond | number;
 
 

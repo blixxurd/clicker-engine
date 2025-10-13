@@ -7,7 +7,7 @@ import {
   createInMemoryGeneratorRegistry,
   createInMemoryItemRegistry,
   createInMemoryUpgradeRegistry,
-  tick,
+  TickService,
   type GeneratorId,
   type ItemId,
   type RatePerSecond,
@@ -42,7 +42,7 @@ describe("generator item outputs", () => {
       upgrades: [],
     };
 
-    const s2 = tick(s1, 5, registries);
+    const s2 = TickService.tick(s1, 5, registries);
     // rate 0.6 * owned 2 * dt 5 = 6 → 6 items
     const total = s2.inventory.reduce((acc, e) => acc + (e.id === shard ? e.count : 0), 0);
     expect(total).toBe(6);

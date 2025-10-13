@@ -5,18 +5,18 @@ import { createEventBus, type EventBus, type EngineEvent } from "../core/EventBu
 import { InventoryManager } from "./InventoryManager";
 import { TaskManager } from "./TaskManager";
 import { Economy } from "./Economy";
-import type { BuyGeneratorArgs, ApplyUpgradeArgs, SellResourceArgs, SellItemsArgs, GrantResourceArgs, ConsumeResourceArgs } from "./Economy";
+import type { BuyGeneratorArgs, ApplyUpgradeArgs, SellResourceArgs, SellItemsArgs, GrantResourceArgs, ConsumeResourceArgs } from "../service/EconomyService";
 import { TickRunner } from "./TickRunner";
-import type { ItemId } from "../types/core";
-import type { TaskInstance } from "../model/task";
+import type { ItemIdLike, TaskIdLike, ItemId, TaskId, ResourceId } from "../types/core";
 import { PersistenceManager, SystemClock, type Clock } from "./PersistenceManager";
 
 /**
  * Game-scoped façade bundling state, event bus, and domain subsystems.
  *
- * Preferred high-level entrypoint for host apps. It wires up subsystems with a shared
+ * Primary high-level entrypoint for host apps. It wires up subsystems with a shared
  * `StateAccessor`, enabling simple one-stop interactions (ticks, economy, inventory, tasks,
- * persistence). For a thinner shell, see {@link Engine}.
+ * persistence). For direct access to individual controllers, instantiate them separately
+ * with your own StateAccessor and Registries.
  */
 export class Game {
   public readonly accessor: StateAccessor;
@@ -77,13 +77,13 @@ export class Game {
     events.forEach((e) => this.bus.emit(e));
     return events;
   }
-  public addItems(itemId: ItemId, count: number): ReadonlyArray<EngineEvent> {
-    const events = this.inventory.add(itemId, count);
+  public addItems(itemId: ItemIdLike, count: number): ReadonlyArray<EngineEvent> {
+    const events = this.inventory.add(itemId as ItemId, count);
     events.forEach((e) => this.bus.emit(e));
     return events;
   }
-  public consumeItems(itemId: ItemId, count: number): ReadonlyArray<EngineEvent> {
-    const events = this.inventory.consume(itemId, count);
+  public consumeItems(itemId: ItemIdLike, count: number): ReadonlyArray<EngineEvent> {
+    const events = this.inventory.consume(itemId as ItemId, count);
     events.forEach((e) => this.bus.emit(e));
     return events;
   }
@@ -92,10 +92,19 @@ export class Game {
     events.forEach((e) => this.bus.emit(e));
     return events;
   }
-  public claimTask(taskId: TaskInstance["id"]): ReadonlyArray<EngineEvent> {
-    const events = this.tasks.claim(taskId);
+  public claimTask(taskId: TaskIdLike): ReadonlyArray<EngineEvent> {
+    const events = this.tasks.claim(taskId as TaskId);
     events.forEach((e) => this.bus.emit(e));
     return events;
+  }
+
+  /**
+   * Query current production rates for all resources.
+   * Returns a map of resource IDs to production rates per second.
+   * Useful for displaying "X/sec" statistics in UI.
+   */
+  public getProductionRates(): Map<ResourceId, number> {
+    return this.tick.getProductionRates();
   }
 
 }
