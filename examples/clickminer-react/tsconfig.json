@@ -13,7 +13,7 @@
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
     "paths": {
-      "clicker-game-engine": ["../../dist/index.d.ts"]
+      "@fidget/idle-engine": ["../../dist/index.d.ts"]
     }
   },
   "include": ["src", "vite.config.ts"]

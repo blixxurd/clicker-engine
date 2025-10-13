@@ -1,5 +1,5 @@
 /**
- * Public entry point for the Clicker Game Engine.
+ * Public entry point for the Idle Clicker Engine.
  *
  * The primary interface is the {@link Game} class, which orchestrates all subsystems
  * with a shared state. Advanced users can import controllers and services directly

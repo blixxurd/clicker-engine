@@ -1,6 +1,6 @@
 # Examples
 
-This folder contains example applications demonstrating how to use **Clicker Game Engine** in real-world scenarios.
+This folder contains example applications demonstrating how to use **Idle Clicker Engine** in real-world scenarios.
 
 ---
 
@@ -37,7 +37,7 @@ This folder contains example applications demonstrating how to use **Clicker Gam
 - React 18
 - TypeScript 5.4
 - Vite 5.4
-- Clicker Game Engine
+- Idle Clicker Engine (`@fidget/idle-engine`)
 
 ---
 
@@ -113,7 +113,7 @@ import {
   createInMemoryItemRegistry,
   createInMemoryUpgradeRegistry,
   createFixedStepLoop,
-} from "clicker-game-engine";
+} from "@fidget/idle-engine";
 
 // 1. Define your IDs (use branded types in production)
 const RES_CURRENCY = "currency" as any;

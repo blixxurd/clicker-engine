@@ -1,5 +1,5 @@
 import React from "react";
-import { Game, type GameState, createInMemoryGeneratorRegistry, createInMemoryResourceRegistry, createInMemoryItemRegistry, createInMemoryUpgradeRegistry, type GeneratorDefinition, type ResourceDefinition, type ItemDefinition, type UpgradeDefinition, type ResourceId, type GeneratorId, type UpgradeId, type Quantity, type RatePerSecond, type ItemId, type EngineEvent, createFixedStepLoop } from "clicker-game-engine";
+import { Game, type GameState, createInMemoryGeneratorRegistry, createInMemoryResourceRegistry, createInMemoryItemRegistry, createInMemoryUpgradeRegistry, type GeneratorDefinition, type ResourceDefinition, type ItemDefinition, type UpgradeDefinition, type ResourceId, type GeneratorId, type UpgradeId, type Quantity, type RatePerSecond, type ItemId, type EngineEvent, createFixedStepLoop } from "@fidget/idle-engine";
 
 // Resources
 const RES_GOLD = "gold" as unknown as ResourceId;

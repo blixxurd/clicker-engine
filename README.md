@@ -61,7 +61,7 @@ import {
   createInMemoryItemRegistry,
   createInMemoryUpgradeRegistry,
   createFixedStepLoop,
-} from "clicker-game-engine";
+} from "@fidget/idle-engine";
 
 // Define initial state
 const initialState: GameState = {
@@ -94,15 +94,48 @@ loop.start();
 
 ---
 
+## 📝 Type Assertions
+
+The engine uses TypeScript branded types for compile-time safety. Here's when you need type assertions:
+
+**✅ When creating definitions (registries):**
+```typescript
+const RES_GOLD = "gold" as ResourceId;  // Simple cast
+const GEN_MINER = "miner" as GeneratorId;
+
+const resources = [{ id: RES_GOLD }];
+const generators = [{ id: GEN_MINER, produces: [...] }];
+```
+
+**✅ When setting initial state:**
+```typescript
+const initialState = {
+  resources: [{ id: RES_GOLD, amount: 100 as Quantity }],
+  // ...
+};
+```
+
+**❌ NOT needed when calling API methods:**
+```typescript
+// These accept plain strings - no casting needed!
+game.buyGenerators({ generatorId: "miner", mode: "1" });
+game.grantResource({ resourceId: "gold", amount: 100 });
+game.addItems("pickaxe", 5);
+game.claimTask("firstQuest");
+```
+
+---
+
 ## 💡 Core Concepts
 
 ### Resources
 Resources are continuous numeric values (e.g., gold, ore, energy) that can be produced by generators or spent on purchases.
 
 ```typescript
-import type { ResourceDefinition, ResourceId, Quantity } from "clicker-game-engine";
+import type { ResourceDefinition, ResourceId, Quantity } from "@fidget/idle-engine";
 
-const RES_GOLD = "gold" as unknown as ResourceId;
+// Define resource IDs with a simple type assertion
+const RES_GOLD = "gold" as ResourceId;
 
 const resources: ResourceDefinition[] = [
   { id: RES_GOLD },
@@ -112,7 +145,7 @@ const resources: ResourceDefinition[] = [
 const initialState: GameState = {
   version: 1,
   resources: [
-    { id: RES_GOLD, amount: 100 as unknown as Quantity },
+    { id: RES_GOLD, amount: 100 as Quantity },
   ],
   generators: [],
   inventory: [],
@@ -125,15 +158,15 @@ const initialState: GameState = {
 Resources can optionally have a maximum capacity. When set, production will cap at the specified limit.
 
 ```typescript
-const RES_ENERGY = "energy" as unknown as ResourceId;
+const RES_ENERGY = "energy" as ResourceId;
 
 const initialState: GameState = {
   version: 1,
   resources: [
     { 
       id: RES_ENERGY, 
-      amount: 50 as unknown as Quantity,
-      capacity: 100 as unknown as Quantity  // Energy caps at 100
+      amount: 50 as Quantity,
+      capacity: 100 as Quantity  // Energy caps at 100
     },
   ],
   generators: [],
@@ -148,16 +181,16 @@ Useful for resources like energy, stamina, or storage that have natural limits.
 Generators produce resources or items at a specified rate per second. They have exponential cost scaling built-in.
 
 ```typescript
-import type { GeneratorDefinition, GeneratorId, RatePerSecond } from "clicker-game-engine";
+import type { GeneratorDefinition, GeneratorId, RatePerSecond } from "@fidget/idle-engine";
 
-const GEN_MINER = "miner" as unknown as GeneratorId;
-const RES_ORE = "ore" as unknown as ResourceId;
+const GEN_MINER = "miner" as GeneratorId;
+const RES_ORE = "ore" as ResourceId;
 
 const generators: GeneratorDefinition[] = [
   {
     id: GEN_MINER,
     produces: [
-      { kind: "resource", resourceId: RES_ORE, rate: 1 as unknown as RatePerSecond },
+      { kind: "resource", resourceId: RES_ORE, rate: 1 as RatePerSecond },
     ],
     pricing: {
       costResourceId: RES_GOLD,
@@ -167,19 +200,19 @@ const generators: GeneratorDefinition[] = [
   },
 ];
 
-// Buy generators
-game.buyGenerators({ generatorId: GEN_MINER, mode: "1" });  // Buy 1
-game.buyGenerators({ generatorId: GEN_MINER, mode: "10" }); // Buy 10
-game.buyGenerators({ generatorId: GEN_MINER, mode: "max" }); // Buy as many as possible
+// Buy generators - API accepts plain strings!
+game.buyGenerators({ generatorId: "miner", mode: "1" });  // Buy 1
+game.buyGenerators({ generatorId: "miner", mode: "10" }); // Buy 10
+game.buyGenerators({ generatorId: "miner", mode: "max" }); // Buy as many as possible
 ```
 
 ### Items & Inventory
 Items are discrete, stackable objects. They can be produced by generators or consumed for crafting/upgrades.
 
 ```typescript
-import type { ItemDefinition, ItemId } from "clicker-game-engine";
+import type { ItemDefinition, ItemId } from "@fidget/idle-engine";
 
-const ITEM_PICKAXE = "pickaxe" as unknown as ItemId;
+const ITEM_PICKAXE = "pickaxe" as ItemId;
 
 const items: ItemDefinition[] = [
   {
@@ -189,18 +222,18 @@ const items: ItemDefinition[] = [
   },
 ];
 
-// Add/consume items
-game.addItems(ITEM_PICKAXE, 5);
-game.consumeItems(ITEM_PICKAXE, 1);
+// Add/consume items - API accepts plain strings!
+game.addItems("pickaxe", 5);
+game.consumeItems("pickaxe", 1);
 ```
 
 ### Upgrades & Modifiers
 Upgrades apply permanent modifiers to generators or resources. Modifiers can multiply (`mult`) or add (`add`) to production rates.
 
 ```typescript
-import type { UpgradeDefinition, UpgradeId } from "clicker-game-engine";
+import type { UpgradeDefinition, UpgradeId } from "@fidget/idle-engine";
 
-const UP_DOUBLE = "doubleProduction" as unknown as UpgradeId;
+const UP_DOUBLE = "doubleProduction" as UpgradeId;
 
 const upgrades: UpgradeDefinition[] = [
   {
@@ -215,10 +248,10 @@ const upgrades: UpgradeDefinition[] = [
   },
 ];
 
-// Apply upgrade (costs handled externally or via task rewards)
+// Apply upgrade - API accepts plain strings!
 game.applyUpgrade({
-  upgradeId: UP_DOUBLE,
-  costResourceId: RES_GOLD,
+  upgradeId: "doubleProduction",
+  costResourceId: "gold",
   cost: 100,
 });
 ```
@@ -227,9 +260,9 @@ game.applyUpgrade({
 Tasks track requirements (resource amounts, generator counts, etc.) and grant rewards when claimed.
 
 ```typescript
-import type { TaskDefinition, TaskId } from "clicker-game-engine";
+import type { TaskDefinition, TaskId } from "@fidget/idle-engine";
 
-const TASK_FIRST_MINER = "firstMiner" as unknown as TaskId;
+const TASK_FIRST_MINER = "firstMiner" as TaskId;
 
 const tasks: TaskDefinition[] = [
   {
@@ -245,8 +278,8 @@ const tasks: TaskDefinition[] = [
   },
 ];
 
-// Tasks are evaluated and claimed via TaskManager
-game.claimTask(TASK_FIRST_MINER);
+// Tasks are evaluated and claimed - API accepts plain strings!
+game.claimTask("firstMiner");
 ```
 
 ---
@@ -268,16 +301,16 @@ import {
   type GeneratorId,
   type Quantity,
   type RatePerSecond,
-} from "clicker-game-engine";
+} from "@fidget/idle-engine";
 
-// Type-safe IDs (using branded types)
-const RES_GOLD = "gold" as unknown as ResourceId;
-const RES_ORE = "ore" as unknown as ResourceId;
-const GEN_MINER = "miner" as unknown as GeneratorId;
+// Type-safe IDs (using branded types for definitions)
+const RES_GOLD = "gold" as ResourceId;
+const RES_ORE = "ore" as ResourceId;
+const GEN_MINER = "miner" as GeneratorId;
 
-// Helper functions for branded types
-const qty = (n: number): Quantity => n as unknown as Quantity;
-const rps = (n: number): RatePerSecond => n as unknown as RatePerSecond;
+// Helper functions for numeric branded types
+const qty = (n: number): Quantity => n as Quantity;
+const rps = (n: number): RatePerSecond => n as RatePerSecond;
 
 // Create registries
 const registries: Registries = {
@@ -311,8 +344,8 @@ const initialState: GameState = {
 // Create game
 const game = new Game(initialState, registries);
 
-// Buy a miner
-game.buyGenerators({ generatorId: GEN_MINER, mode: "1" });
+// Buy a miner - can use plain string
+game.buyGenerators({ generatorId: "miner", mode: "1" });
 
 // Simulate 10 seconds of gameplay
 game.step(10);
@@ -363,7 +396,7 @@ displayText(`Gold: ${gold.toFixed(0)} (+${goldRate.toFixed(1)}/sec)`);
 ### Persistence & Offline Progress
 
 ```typescript
-import { serialize, parse, applyOfflineProgress } from "clicker-game-engine";
+import { serialize, parse, applyOfflineProgress } from "@fidget/idle-engine";
 
 // Save game
 const json = serialize(game.accessor.getState());
@@ -390,7 +423,7 @@ if (savedJson) {
 ### Game Loop Integration
 
 ```typescript
-import { createFixedStepLoop } from "clicker-game-engine";
+import { createFixedStepLoop } from "@fidget/idle-engine";
 
 // Create a fixed-step loop (handles framerate independence)
 const loop = createFixedStepLoop(game, {
@@ -527,15 +560,15 @@ interface GameState {
 
 ```typescript
 // Number formatting
-import { formatShort } from "clicker-game-engine";
+import { formatShort } from "@fidget/idle-engine";
 formatShort(1234567);  // "1.23M"
 
 // Bulk buy calculations
-import { bulk } from "clicker-game-engine";
+import { bulk } from "@fidget/idle-engine";
 bulk.maxAffordable(currentGold, baseCost, growth, owned); // Calculate max buyable
 
 // Persistence
-import { serialize, parse, applyOfflineProgress } from "clicker-game-engine";
+import { serialize, parse, applyOfflineProgress } from "@fidget/idle-engine";
 ```
 
 ---
@@ -591,7 +624,7 @@ npm run docs
 ### Project Structure
 
 ```
-clicker-game-engine/
+idle-engine/
 ├── src/
 │   ├── controller/    # Stateful orchestration layer
 │   ├── service/       # Pure game logic

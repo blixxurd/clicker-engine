@@ -6,7 +6,7 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      "clicker-game-engine": path.resolve(__dirname, "../../dist/index.js"),
+      "@fidget/idle-engine": path.resolve(__dirname, "../../dist/index.js"),
     },
   },
 });
