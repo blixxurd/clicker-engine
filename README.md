@@ -1,9 +1,5 @@
 # Clicker Game Engine
 
-[![npm version](https://img.shields.io/npm/v/clicker-game-engine)](https://www.npmjs.com/package/clicker-game-engine)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.4+-blue.svg)](https://www.typescriptlang.org/)
-
 > A TypeScript-first, framework-agnostic engine for building incremental/idle/clicker games. Deterministic, composable, and production-ready.
 
 **Clicker Game Engine** provides the core building blocks for idle games: resources, generators with cost scaling, items, upgrades, tasks, persistence with offline progress, and an event system for UI reactivity—all with strict TypeScript types and zero framework lock-in.
@@ -417,7 +413,7 @@ The engine follows a **functional core, imperative shell** pattern:
 
 ### Controllers (Stateful)
 Controllers orchestrate game operations, mutate state, and emit events:
-- **`Game`**: Single-touchpoint façade composing all subsystems
+- **`Game`**: Single-touchpoint facade composing all subsystems
 - **`Economy`**: Handles purchases, upgrades, resource transactions
 - **`InventoryManager`**: Item add/consume operations
 - **`TaskManager`**: Task evaluation and claiming
@@ -658,6 +654,7 @@ See [ROADMAP.md](./docs/ROADMAP.md) for planned features and improvements.
 - CI/CD with GitHub Actions
 - More number formatting styles (engineering, letter notation)
 - Performance microbenchmarks
+- More examples
 
 ---
 
@@ -682,13 +679,13 @@ Contributions are welcome! Please follow these guidelines:
 
 ## 📜 License
 
-[MIT](./LICENSE) © 2024
+[MIT](./LICENSE) © 2025
 
 ---
 
 ## 🙏 Acknowledgments
 
-Built with inspiration from classic idle games and modern TypeScript best practices. Special thanks to the incremental games community for design insights and feedback.
+Built with inspiration from classic idle games and modern TypeScript best practices.
 
 ---
 
