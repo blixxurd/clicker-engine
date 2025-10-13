@@ -122,7 +122,7 @@ function useGame(): { game: Game; state: GameState; step: (dt: number) => void; 
 }
 
 export function App(): JSX.Element {
-  const { game, state, step, refresh } = useGame();
+  const { game, state, refresh } = useGame();
   const [running, setRunning] = React.useState(true);
   const [passive, setPassive] = React.useState<PassiveTarget>("copper");
   const [techniqueLastGrant, setTechniqueLastGrant] = React.useState<number>(0);
@@ -130,8 +130,6 @@ export function App(): JSX.Element {
   const [bronzeRemaining, setBronzeRemaining] = React.useState<number>(100);
   const [ironRemaining, setIronRemaining] = React.useState<number>(100);
   const [steelRemaining, setSteelRemaining] = React.useState<number>(100);
-  const [bronzeCopperProgress, setBronzeCopperProgress] = React.useState<number>(0);
-  const [breakToast, setBreakToast] = React.useState<string>("");
   const [recipes, setRecipes] = React.useState<{ bronzeBar: boolean; ironBar: boolean; steelBar: boolean; bronzePick: boolean; ironPick: boolean }>({ bronzeBar: false, ironBar: false, steelBar: false, bronzePick: false, ironPick: false });
 
   const RECIPE_UNLOCK = {
@@ -337,10 +335,6 @@ export function App(): JSX.Element {
   const buyBronze = (): void => buyPicks(ITEM_BRONZE_PICK, buyBronzeCost, 1);
   const buyIron = (): void => buyPicks(ITEM_IRON_PICK, buyIronCost, 1);
   const buySteel = (): void => buyPicks(ITEM_STEEL_PICK, buySteelCost, 1);
-
-  const sellCopper = (): void => { game.sellResource({ fromResourceId: RES_ORE_COPPER, toResourceId: RES_GOLD, unitPrice: PRICE.sell.copper }); refresh(); };
-  const sellIron = (): void => { game.sellResource({ fromResourceId: RES_ORE_IRON, toResourceId: RES_GOLD, unitPrice: PRICE.sell.iron }); refresh(); };
-  const sellCoal = (): void => { game.sellResource({ fromResourceId: RES_ORE_COAL, toResourceId: RES_GOLD, unitPrice: PRICE.sell.coal }); refresh(); };
 
   const disabledStyle = (cond: boolean): React.CSSProperties => cond ? { opacity: 0.6, pointerEvents: "none" } : {};
 

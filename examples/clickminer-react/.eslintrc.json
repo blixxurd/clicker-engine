@@ -1,6 +1,6 @@
 {
   "parserOptions": {
-    "project": ["examples/runemine-react/tsconfig.json"]
+    "project": ["examples/clickminer-react/tsconfig.json"]
   },
   "rules": {
     "import/no-unresolved": "off"
