@@ -5,7 +5,7 @@ import { createEventBus, type EventBus, type EngineEvent } from "../core/EventBu
 import { InventoryManager } from "./InventoryManager";
 import { TaskManager } from "./TaskManager";
 import { Economy } from "./Economy";
-import type { BuyGeneratorArgs, ApplyUpgradeArgs } from "./Economy";
+import type { BuyGeneratorArgs, ApplyUpgradeArgs, SellResourceArgs, SellItemsArgs, GrantResourceArgs, ConsumeResourceArgs } from "./Economy";
 import { TickRunner } from "./TickRunner";
 import type { ItemId } from "../types/core";
 import type { TaskInstance } from "../model/task";
@@ -62,6 +62,21 @@ export class Game {
     events.forEach((e) => this.bus.emit(e));
     return events;
   }
+  public sellResource(args: SellResourceArgs): ReadonlyArray<EngineEvent> {
+    const events = this.economy.sellResource(args);
+    events.forEach((e) => this.bus.emit(e));
+    return events;
+  }
+  public sellItems(args: SellItemsArgs): ReadonlyArray<EngineEvent> {
+    const events = this.economy.sellItems(args);
+    events.forEach((e) => this.bus.emit(e));
+    return events;
+  }
+  public grantResource(args: GrantResourceArgs): ReadonlyArray<EngineEvent> {
+    const events = this.economy.grantResource(args);
+    events.forEach((e) => this.bus.emit(e));
+    return events;
+  }
   public addItems(itemId: ItemId, count: number): ReadonlyArray<EngineEvent> {
     const events = this.inventory.add(itemId, count);
     events.forEach((e) => this.bus.emit(e));
@@ -69,6 +84,11 @@ export class Game {
   }
   public consumeItems(itemId: ItemId, count: number): ReadonlyArray<EngineEvent> {
     const events = this.inventory.consume(itemId, count);
+    events.forEach((e) => this.bus.emit(e));
+    return events;
+  }
+  public consumeResource(args: ConsumeResourceArgs): ReadonlyArray<EngineEvent> {
+    const events = this.economy.consumeResource(args);
     events.forEach((e) => this.bus.emit(e));
     return events;
   }

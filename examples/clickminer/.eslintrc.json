@@ -1,0 +1,8 @@
+{
+  "parserOptions": {
+    "project": ["examples/runemine-react/tsconfig.json"]
+  },
+  "rules": {
+    "import/no-unresolved": "off"
+  }
+}

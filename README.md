@@ -42,6 +42,20 @@ game.step(1);
 const loop = createFixedStepLoop(game, { stepSeconds: 0.5 });
 ```
 
+## Examples
+- `examples/minimal.ts`: Smallest possible setup and single tick.
+- `examples/runemine.ts`: RuneScape-inspired mining demo showing resources, generators, upgrades, and a simple simulation. Run it with:
+```bash
+ts-node examples/runemine.ts
+```
+- `examples/runemine-react`: Modern React + Vite browser demo. Build the engine first, then run:
+```bash
+npm run build
+cd examples/runemine-react
+npm i
+npm run dev
+```
+
 ## Generators: outputs and pricing
 - Outputs (resource or item):
   - Resource: `{ kind: "resource", resourceId, rate }`
@@ -119,12 +133,4 @@ game.bus.on("tickStart", (e) => {});
   - `inventory.add/consume/count` → `InventoryService.add/consume/count` or `Game.addItems/consumeItems`.
   - `evaluateTasks/claimTask` → `TaskService.evaluate/claim` or `Game.claimTask`.
 - Introduced `Game` single-touchpoint API. `Engine` remains available; both expose the same operations.
-- `Economy` now owns buy/upgrade math; `BuyGeneratorArgs`/`ApplyUpgradeArgs` live in `controller/Economy.ts`.
-- Event bus moved to `core/EventBus.ts` and is class-based (`InMemoryEventBus`).
-
-## Scripts
-- `check`: lint + test + build + typecheck
-- `docs`: generate API docs to `docs/api`
-
-## License
-MIT
+- `

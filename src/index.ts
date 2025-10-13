@@ -93,7 +93,7 @@ export { CURRENT_SCHEMA_VERSION, serialize, parse, applyOfflineProgress, parseWi
 export { PersistenceError, InvalidJsonError, ValidationError, UnsupportedVersionError } from "./errors/PersistenceError";
 
 // Economy / tasks / state access
-export { Economy, type BuyGeneratorArgs, type ApplyUpgradeArgs } from "./controller/Economy";
+export { Economy, type BuyGeneratorArgs, type ApplyUpgradeArgs, type SellResourceArgs, type SellItemsArgs, type GrantResourceArgs, type ConsumeResourceArgs } from "./controller/Economy";
 export { TaskManager } from "./controller/TaskManager";
 export { TaskService } from "./service/TaskService";
 export { TaskService as tasks } from "./service/TaskService";

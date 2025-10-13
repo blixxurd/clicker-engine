@@ -5,7 +5,8 @@
     "tests",
     "vitest.config.ts",
     "tsup.config.ts",
-    "examples/**/*.ts"
+    "examples/**/*.ts",
+    "examples/**/*.tsx"
   ]
 }
 
