@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.0] - 2026-01-15
+
+### Stable Release
+
+First stable release of Idle Clicker Engine. The API is now considered stable and follows semantic versioning.
+
+### Added
+- GitHub Actions CI workflow for automated testing across Node 18, 20, and 22
+
+### Notes
+- All core systems production-ready: resources, generators, items, upgrades, tasks, persistence, events, reactive state
+- Comprehensive test coverage (85%+)
+- Full TypeScript support with branded types for compile-time safety
+- Framework-agnostic design for use with any UI library
+
 ## [0.5.0] - 2026-01-15
 
 ### Added

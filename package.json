@@ -1,6 +1,6 @@
 {
   "name": "@fidget/idle-engine",
-  "version": "0.5.0",
+  "version": "1.0.0",
   "description": "TypeScript-first incremental/clicker engine library. Framework-agnostic, deterministic, and production-ready for building idle/clicker games.",
   "license": "MIT",
   "author": "Idle Clicker Engine Contributors",
