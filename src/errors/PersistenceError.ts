@@ -26,3 +26,31 @@ export class UnsupportedVersionError extends PersistenceError {
     this.version = version;
   }
 }
+
+/** Thrown when no migration path exists between schema versions. */
+export class MigrationPathError extends PersistenceError {
+  public override name = "MigrationPathError";
+  public readonly fromVersion: number;
+  public readonly toVersion: number;
+
+  public constructor(fromVersion: number, toVersion: number) {
+    super(`No migration path from version ${fromVersion} to ${toVersion}`);
+    this.fromVersion = fromVersion;
+    this.toVersion = toVersion;
+  }
+}
+
+/** Thrown when a migration step fails during execution. */
+export class MigrationError extends PersistenceError {
+  public override name = "MigrationError";
+  public readonly fromVersion: number;
+  public readonly toVersion: number;
+  public readonly reason: string;
+
+  public constructor(fromVersion: number, toVersion: number, reason: string) {
+    super(`Migration from v${fromVersion} to v${toVersion} failed: ${reason}`);
+    this.fromVersion = fromVersion;
+    this.toVersion = toVersion;
+    this.reason = reason;
+  }
+}

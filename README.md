@@ -96,22 +96,28 @@ loop.start();
 
 ## 📝 Type Assertions
 
-The engine uses TypeScript branded types for compile-time safety. Here's when you need type assertions:
+The engine uses TypeScript branded types for compile-time safety. You have two options:
 
-**✅ When creating definitions (registries):**
+**Option 1: Use helper functions (recommended):**
 ```typescript
-const RES_GOLD = "gold" as ResourceId;  // Simple cast
-const GEN_MINER = "miner" as GeneratorId;
+import { resourceId, generatorId, qty, rps } from "@fidget/idle-engine";
 
-const resources = [{ id: RES_GOLD }];
-const generators = [{ id: GEN_MINER, produces: [...] }];
+const RES_GOLD = resourceId("gold");
+const GEN_MINER = generatorId("miner");
+
+const initialState = {
+  resources: [{ id: RES_GOLD, amount: qty(100) }],
+  generators: [{ id: GEN_MINER, owned: 0 }],
+};
 ```
 
-**✅ When setting initial state:**
+**Option 2: Use type assertions:**
 ```typescript
+const RES_GOLD = "gold" as ResourceId;
+const GEN_MINER = "miner" as GeneratorId;
+
 const initialState = {
   resources: [{ id: RES_GOLD, amount: 100 as Quantity }],
-  // ...
 };
 ```
 
@@ -406,7 +412,7 @@ localStorage.setItem("savegame", json);
 const savedJson = localStorage.getItem("savegame");
 if (savedJson) {
   const loadedState = parse(savedJson);
-  
+
   // Apply offline progress (time since last save)
   const lastSaveTime = Date.now() - 3600000; // 1 hour ago
   const stateWithOffline = applyOfflineProgress(
@@ -415,9 +421,79 @@ if (savedJson) {
     lastSaveTime,
     Date.now()
   );
-  
+
   const game = new Game(stateWithOffline, registries);
 }
+```
+
+#### Schema Migrations
+
+Old saves are automatically migrated to the current schema version when loaded:
+
+```typescript
+import { parseWithMigrationInfo, CURRENT_SCHEMA_VERSION } from "@fidget/idle-engine";
+
+const result = parseWithMigrationInfo(savedJson);
+
+if (result.migrated) {
+  console.log(`Save upgraded: v${result.versionPath[0]} → v${result.versionPath.at(-1)}`);
+}
+
+// result.state is ready to use
+const game = new Game(result.state, registries);
+```
+
+See [docs/ROADMAP.md](./docs/ROADMAP.md) for how to add migrations when updating the schema.
+
+### Reactive State Subscriptions
+
+Subscribe to specific state changes without polling, using type-safe selectors:
+
+```typescript
+import { select, createStateStore, createSelector } from "@fidget/idle-engine";
+
+// Create a reactive store wrapping your game's state accessor
+const store = createStateStore(game.accessor);
+
+// Subscribe to gold amount changes
+const unsubscribe = store.subscribe(
+  select.resource("gold").amount,
+  (gold, prevGold) => {
+    console.log(`Gold changed: ${prevGold} → ${gold}`);
+    updateGoldDisplay(gold);
+  }
+);
+
+// Subscribe to generator owned count
+store.subscribe(select.generator("miner").owned, (owned) => {
+  updateMinerCount(owned);
+});
+
+// Create derived selectors for computed values
+const selectTotalWealth = createSelector(
+  [select.resource("gold").amount, select.resource("gems").amount],
+  (gold, gems) => gold + gems * 100
+);
+
+store.subscribe(selectTotalWealth, (wealth) => {
+  updateWealthDisplay(wealth);
+});
+
+// Unsubscribe when done
+unsubscribe();
+```
+
+#### Batched Mode (for Game Loops)
+
+In game loops, you may want to batch notifications until the end of each tick:
+
+```typescript
+const store = createStateStore(game.accessor, {
+  batched: true,
+  flushOn: game.bus,  // Auto-flush on "tickEnd" events
+});
+
+// Subscriptions won't fire until tickEnd, reducing UI updates per frame
 ```
 
 ### Game Loop Integration
@@ -497,6 +573,47 @@ game.applyUpgrade({ ... });    // Emits upgrade events
 
 ---
 
+## ⚠️ Error Handling
+
+Economy operations come in two variants:
+
+**Silent (default)**: Returns an empty event array on failure
+```typescript
+const events = game.buyGenerators({ generatorId: "miner", mode: "1" });
+if (events.length === 0) {
+  // Purchase failed (not enough resources, generator not found, etc.)
+}
+```
+
+**Throwing**: Throws typed errors for explicit error handling
+```typescript
+import {
+  InsufficientResourceError,
+  GeneratorNotFoundError,
+  ResourceNotFoundError,
+} from "@fidget/idle-engine";
+
+try {
+  game.buyGeneratorsOrThrow({ generatorId: "miner", mode: "1" });
+} catch (err) {
+  if (err instanceof InsufficientResourceError) {
+    console.log(`Need ${err.required}, have ${err.available}`);
+  } else if (err instanceof GeneratorNotFoundError) {
+    console.log(`Unknown generator: ${err.generatorId}`);
+  }
+}
+```
+
+Available error classes:
+- `InsufficientResourceError` - Not enough resources for operation
+- `GeneratorNotFoundError` - Generator ID not in registry
+- `ResourceNotFoundError` - Resource ID not in state
+- `ItemNotFoundError` - Item ID not in registry
+- `UpgradeNotFoundError` - Upgrade ID not in registry
+- `InvalidQuantityError` - Invalid quantity (negative, NaN, etc.)
+
+---
+
 ## 📚 API Overview
 
 ### `Game` Class
@@ -507,6 +624,7 @@ class Game {
   // Subsystems
   readonly accessor: StateAccessor;
   readonly bus: EventBus;
+  readonly store: StateStoreResult;  // Reactive state subscriptions
   readonly economy: Economy;
   readonly inventory: InventoryManager;
   readonly tasks: TaskManager;
@@ -516,18 +634,24 @@ class Game {
   step(dtSeconds: number): void;
   stepWithEvents(dtSeconds: number): ReadonlyArray<EngineEvent>;
   getProductionRates(): Map<ResourceId, number>;
-  
-  // Economy operations
+
+  // Economy operations (return empty array on failure)
   buyGenerators(args: BuyGeneratorArgs): ReadonlyArray<EngineEvent>;
   applyUpgrade(args: ApplyUpgradeArgs): ReadonlyArray<EngineEvent>;
   sellResource(args: SellResourceArgs): ReadonlyArray<EngineEvent>;
   grantResource(args: GrantResourceArgs): ReadonlyArray<EngineEvent>;
   consumeResource(args: ConsumeResourceArgs): ReadonlyArray<EngineEvent>;
-  
+
+  // Economy operations (throw typed errors on failure)
+  buyGeneratorsOrThrow(args: BuyGeneratorArgs): ReadonlyArray<EngineEvent>;
+  applyUpgradeOrThrow(args: ApplyUpgradeArgs): ReadonlyArray<EngineEvent>;
+  grantResourceOrThrow(args: GrantResourceArgs): ReadonlyArray<EngineEvent>;
+  consumeResourceOrThrow(args: ConsumeResourceArgs): ReadonlyArray<EngineEvent>;
+
   // Inventory operations
   addItems(itemId: ItemId, count: number): ReadonlyArray<EngineEvent>;
   consumeItems(itemId: ItemId, count: number): ReadonlyArray<EngineEvent>;
-  
+
   // Task operations
   claimTask(taskId: TaskId): ReadonlyArray<EngineEvent>;
 }
@@ -683,7 +807,6 @@ npm run docs
 See [ROADMAP.md](./docs/ROADMAP.md) for planned features and improvements.
 
 **Coming soon**:
-- Enhanced persistence migrations (v1→v2 schema evolution)
 - CI/CD with GitHub Actions
 - More number formatting styles (engineering, letter notation)
 - Performance microbenchmarks

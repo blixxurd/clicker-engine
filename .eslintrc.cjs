@@ -30,7 +30,7 @@ module.exports = {
       },
     },
   ],
-  ignorePatterns: ["dist/**", "docs/**"],
+  ignorePatterns: ["dist/**", "docs/**", "coverage/**", "examples/**/dist/**"],
 };
 
 

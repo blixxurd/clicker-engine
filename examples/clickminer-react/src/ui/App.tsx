@@ -1,21 +1,50 @@
 import React from "react";
-import { Game, type GameState, createInMemoryGeneratorRegistry, createInMemoryResourceRegistry, createInMemoryItemRegistry, createInMemoryUpgradeRegistry, type GeneratorDefinition, type ResourceDefinition, type ItemDefinition, type UpgradeDefinition, type ResourceId, type GeneratorId, type UpgradeId, type Quantity, type RatePerSecond, type ItemId, type EngineEvent, createFixedStepLoop } from "@fidget/idle-engine";
+import {
+  Game,
+  type GameState,
+  type Registries,
+  createInMemoryGeneratorRegistry,
+  createInMemoryResourceRegistry,
+  createInMemoryItemRegistry,
+  createInMemoryUpgradeRegistry,
+  type GeneratorDefinition,
+  type ResourceDefinition,
+  type ItemDefinition,
+  type UpgradeDefinition,
+  type ResourceId,
+  type ItemId,
+  type EngineEvent,
+  createFixedStepLoop,
+  // Persistence
+  serialize,
+  parseWithMigrationInfo,
+  // Reactive selectors
+  select,
+  type Selector,
+  // Type helpers
+  resourceId,
+  generatorId,
+  itemId,
+  upgradeId,
+  qty,
+  rps,
+} from "@fidget/idle-engine";
 
 // Resources
-const RES_GOLD = "gold" as unknown as ResourceId;
-const RES_XP = "xp" as unknown as ResourceId;
-const RES_ORE_COPPER = "ore_copper" as unknown as ResourceId;
-const RES_ORE_TIN = "ore_tin" as unknown as ResourceId;
-const RES_ORE_IRON = "ore_iron" as unknown as ResourceId;
-const RES_ORE_COAL = "ore_coal" as unknown as ResourceId;
+const RES_GOLD = resourceId("gold");
+const RES_XP = resourceId("xp");
+const RES_ORE_COPPER = resourceId("ore_copper");
+const RES_ORE_TIN = resourceId("ore_tin");
+const RES_ORE_IRON = resourceId("ore_iron");
+const RES_ORE_COAL = resourceId("ore_coal");
 
 // Pickaxe items
-const ITEM_BRONZE_PICK = "bronze_pick" as unknown as ItemId;
-const ITEM_IRON_PICK = "iron_pick" as unknown as ItemId;
-const ITEM_STEEL_PICK = "steel_pick" as unknown as ItemId;
-const ITEM_IRON_BAR = "iron_bar" as unknown as ItemId;
-const ITEM_STEEL_BAR = "steel_bar" as unknown as ItemId;
-const ITEM_BRONZE_BAR = "bronze_bar" as unknown as ItemId;
+const ITEM_BRONZE_PICK = itemId("bronze_pick");
+const ITEM_IRON_PICK = itemId("iron_pick");
+const ITEM_STEEL_PICK = itemId("steel_pick");
+const ITEM_IRON_BAR = itemId("iron_bar");
+const ITEM_STEEL_BAR = itemId("steel_bar");
+const ITEM_BRONZE_BAR = itemId("bronze_bar");
 
 // Store pricing (buy>sell to avoid arbitrage)
 const PRICE = {
@@ -40,13 +69,10 @@ const PRICE = {
 } as const;
 
 // Upgrades
-const UP_TECH = "techniqueI" as unknown as UpgradeId;
+const UP_TECH = upgradeId("techniqueI");
 
 // Technique target
 type PassiveTarget = "copper" | "tin" | "iron" | "coal";
-
-const qty = (n: number): Quantity => n as unknown as Quantity;
-const rps = (n: number): RatePerSecond => n as unknown as RatePerSecond;
 
 const levelFromXp = (xp: number): number => {
   // Steeper curve: xp ≈ 100 * (level - 1)^3
@@ -54,6 +80,55 @@ const levelFromXp = (xp: number): number => {
   const level = Math.floor(Math.cbrt(Math.max(0, xp) / 100)) + 1;
   return Math.max(1, level);
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Persistence
+// ─────────────────────────────────────────────────────────────────────────────
+const STORAGE_KEY = "clickminer-save";
+
+interface RecipeUnlocks {
+  bronzeBar: boolean;
+  ironBar: boolean;
+  steelBar: boolean;
+  bronzePick: boolean;
+  ironPick: boolean;
+}
+
+const DEFAULT_RECIPES: RecipeUnlocks = {
+  bronzeBar: false,
+  ironBar: false,
+  steelBar: false,
+  bronzePick: false,
+  ironPick: false,
+};
+
+interface PassiveSettings {
+  target: PassiveTarget;
+  durability: {
+    bronze: number;
+    iron: number;
+    steel: number;
+  };
+}
+
+const DEFAULT_PASSIVE: PassiveSettings = {
+  target: "copper",
+  durability: { bronze: 100, iron: 100, steel: 100 },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Reactive hook: subscribe to engine state via selectors
+// ─────────────────────────────────────────────────────────────────────────────
+function useSelector<T>(game: Game, selector: Selector<T>): T {
+  const subscribe = React.useCallback(
+    (onStoreChange: () => void) => {
+      return game.store.subscribe(selector, onStoreChange);
+    },
+    [game, selector]
+  );
+  const getSnapshot = React.useCallback(() => game.store.get(selector), [game, selector]);
+  return React.useSyncExternalStore(subscribe, getSnapshot);
+}
 
 const resources: ReadonlyArray<ResourceDefinition> = [
   { id: RES_GOLD },
@@ -66,9 +141,9 @@ const resources: ReadonlyArray<ResourceDefinition> = [
 
 // Generators are present but disabled (rates 0) — passive comes from Technique
 const generators: ReadonlyArray<GeneratorDefinition> = [
-  { id: "bronzePickGen" as unknown as GeneratorId, produces: [{ kind: "resource", resourceId: RES_ORE_COPPER, rate: rps(0) }] },
-  { id: "ironPickGen" as unknown as GeneratorId, produces: [{ kind: "resource", resourceId: RES_ORE_IRON, rate: rps(0) }] },
-  { id: "steelPickGen" as unknown as GeneratorId, produces: [{ kind: "resource", resourceId: RES_ORE_COAL, rate: rps(0) }] },
+  { id: generatorId("bronzePickGen"), produces: [{ kind: "resource", resourceId: RES_ORE_COPPER, rate: rps(0) }] },
+  { id: generatorId("ironPickGen"), produces: [{ kind: "resource", resourceId: RES_ORE_IRON, rate: rps(0) }] },
+  { id: generatorId("steelPickGen"), produces: [{ kind: "resource", resourceId: RES_ORE_COAL, rate: rps(0) }] },
 ];
 
 const items: ReadonlyArray<ItemDefinition> = [
@@ -84,53 +159,266 @@ const upgrades: ReadonlyArray<UpgradeDefinition> = [
   { id: UP_TECH, modifiers: [] },
 ];
 
-function useGame(): { game: Game; state: GameState; step: (dt: number) => void; refresh: () => void } {
-  const [game] = React.useState(() => {
-    const initial: GameState = {
-      version: 1,
-      resources: [
-        { id: RES_GOLD, amount: qty(0) },
-        { id: RES_XP, amount: qty(0) },
-        { id: RES_ORE_COPPER, amount: qty(0) },
-        { id: RES_ORE_TIN, amount: qty(0) },
-        { id: RES_ORE_IRON, amount: qty(0) },
-        { id: RES_ORE_COAL, amount: qty(0) },
-      ],
-      generators: [],
-      inventory: [
-        { id: ITEM_BRONZE_PICK, count: 1 },
-      ],
-      upgrades: [],
-    };
-    const registries = {
-      resources: createInMemoryResourceRegistry(resources),
-      generators: createInMemoryGeneratorRegistry(generators),
-      items: createInMemoryItemRegistry(items),
-      upgrades: createInMemoryUpgradeRegistry(upgrades),
-    };
-    return new Game(initial, registries);
+interface MigrationInfo {
+  migrated: boolean;
+  versionPath: readonly number[];
+}
+
+interface UseGameResult {
+  game: Game;
+  state: GameState;
+  step: (dt: number) => void;
+  refresh: () => void;
+  save: () => void;
+  load: () => MigrationInfo | null;
+  clearSave: () => void;
+  lastMigration: MigrationInfo | null;
+  recipes: RecipeUnlocks;
+  setRecipes: React.Dispatch<React.SetStateAction<RecipeUnlocks>>;
+  passive: PassiveSettings;
+  setPassive: React.Dispatch<React.SetStateAction<PassiveSettings>>;
+}
+
+const createRegistries = (): Registries => ({
+  resources: createInMemoryResourceRegistry(resources),
+  generators: createInMemoryGeneratorRegistry(generators),
+  items: createInMemoryItemRegistry(items),
+  upgrades: createInMemoryUpgradeRegistry(upgrades),
+});
+
+const createInitialState = (): GameState => ({
+  version: 1,
+  resources: [
+    { id: RES_GOLD, amount: qty(0) },
+    { id: RES_XP, amount: qty(0) },
+    { id: RES_ORE_COPPER, amount: qty(0) },
+    { id: RES_ORE_TIN, amount: qty(0) },
+    { id: RES_ORE_IRON, amount: qty(0) },
+    { id: RES_ORE_COAL, amount: qty(0) },
+  ],
+  generators: [],
+  inventory: [{ id: ITEM_BRONZE_PICK, count: 1 }],
+  upgrades: [],
+  custom: { recipes: DEFAULT_RECIPES, passive: DEFAULT_PASSIVE },
+});
+
+function useGame(): UseGameResult {
+  const [lastMigration, setLastMigration] = React.useState<MigrationInfo | null>(null);
+
+  const [{ game }] = React.useState(() => {
+    const regs = createRegistries();
+    let initialState = createInitialState();
+
+    // Try to load from localStorage on initial mount
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const result = parseWithMigrationInfo(saved);
+        // Ensure custom fields exist even for old saves without them
+        const savedPassive = result.state.custom?.passive as PassiveSettings | undefined;
+        initialState = {
+          ...result.state,
+          custom: {
+            ...result.state.custom,
+            recipes: { ...DEFAULT_RECIPES, ...(result.state.custom?.recipes as RecipeUnlocks | undefined) },
+            passive: {
+              target: savedPassive?.target ?? DEFAULT_PASSIVE.target,
+              durability: { ...DEFAULT_PASSIVE.durability, ...savedPassive?.durability },
+            },
+          },
+        };
+        if (result.migrated) {
+          // Store migration info to display on first render
+          setTimeout(() => {
+            setLastMigration({ migrated: result.migrated, versionPath: result.versionPath });
+          }, 0);
+        }
+      } catch (e) {
+        console.warn("Failed to load save, starting fresh:", e);
+      }
+    }
+
+    return { game: new Game(initialState, regs) };
   });
+
   const [state, setState] = React.useState<GameState>(game.accessor.getState());
+
+  // Derive recipes from state.custom.recipes
+  const recipes: RecipeUnlocks = React.useMemo(
+    () => ({ ...DEFAULT_RECIPES, ...(state.custom?.recipes as RecipeUnlocks | undefined) }),
+    [state.custom?.recipes]
+  );
+
+  // Update recipes by modifying game state's custom field
+  const setRecipes: React.Dispatch<React.SetStateAction<RecipeUnlocks>> = React.useCallback(
+    (action) => {
+      const currentState = game.accessor.getState();
+      const currentRecipes = { ...DEFAULT_RECIPES, ...(currentState.custom?.recipes as RecipeUnlocks | undefined) };
+      const newRecipes = typeof action === "function" ? action(currentRecipes) : action;
+      const nextState: GameState = {
+        ...currentState,
+        custom: { ...currentState.custom, recipes: newRecipes },
+      };
+      game.accessor.setState(nextState);
+      setState(nextState);
+    },
+    [game]
+  );
+
+  // Derive passive settings from state.custom.passive
+  const passive: PassiveSettings = React.useMemo(() => {
+    const saved = state.custom?.passive as PassiveSettings | undefined;
+    return {
+      target: saved?.target ?? DEFAULT_PASSIVE.target,
+      durability: { ...DEFAULT_PASSIVE.durability, ...saved?.durability },
+    };
+  }, [state.custom?.passive]);
+
+  // Update passive settings by modifying game state's custom field
+  const setPassive: React.Dispatch<React.SetStateAction<PassiveSettings>> = React.useCallback(
+    (action) => {
+      const currentState = game.accessor.getState();
+      const saved = currentState.custom?.passive as PassiveSettings | undefined;
+      const currentPassive: PassiveSettings = {
+        target: saved?.target ?? DEFAULT_PASSIVE.target,
+        durability: { ...DEFAULT_PASSIVE.durability, ...saved?.durability },
+      };
+      const newPassive = typeof action === "function" ? action(currentPassive) : action;
+      const nextState: GameState = {
+        ...currentState,
+        custom: { ...currentState.custom, passive: newPassive },
+      };
+      game.accessor.setState(nextState);
+      setState(nextState);
+    },
+    [game]
+  );
+
   const step = React.useCallback((dt: number): void => {
     game.step(dt);
     setState(game.accessor.getState());
   }, [game]);
+
   const refresh = React.useCallback((): void => {
     setState(game.accessor.getState());
   }, [game]);
-  return { game, state, step, refresh };
+
+  const save = React.useCallback((): void => {
+    const json = serialize(game.accessor.getState());
+    localStorage.setItem(STORAGE_KEY, json);
+  }, [game]);
+
+  const load = React.useCallback((): MigrationInfo | null => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (!saved) return null;
+
+    try {
+      const result = parseWithMigrationInfo(saved);
+      // Ensure custom fields exist even for old saves
+      const savedPassive = result.state.custom?.passive as PassiveSettings | undefined;
+      const loadedState: GameState = {
+        ...result.state,
+        custom: {
+          ...result.state.custom,
+          recipes: { ...DEFAULT_RECIPES, ...(result.state.custom?.recipes as RecipeUnlocks | undefined) },
+          passive: {
+            target: savedPassive?.target ?? DEFAULT_PASSIVE.target,
+            durability: { ...DEFAULT_PASSIVE.durability, ...savedPassive?.durability },
+          },
+        },
+      };
+      game.accessor.setState(loadedState);
+      setState(loadedState);
+
+      const info: MigrationInfo = { migrated: result.migrated, versionPath: result.versionPath };
+      setLastMigration(info);
+      return info;
+    } catch (e) {
+      console.error("Failed to load save:", e);
+      return null;
+    }
+  }, [game]);
+
+  const clearSave = React.useCallback((): void => {
+    localStorage.removeItem(STORAGE_KEY);
+    const freshState = createInitialState();
+    game.accessor.setState(freshState);
+    setState(freshState);
+    setLastMigration(null);
+  }, [game]);
+
+  return { game, state, step, refresh, save, load, clearSave, lastMigration, recipes, setRecipes, passive, setPassive };
 }
 
 export function App(): JSX.Element {
-  const { game, state, refresh } = useGame();
+  const { game, state, refresh, save, clearSave, lastMigration, recipes, setRecipes, passive, setPassive } = useGame();
   const [running, setRunning] = React.useState(true);
-  const [passive, setPassive] = React.useState<PassiveTarget>("copper");
   const [techniqueLastGrant, setTechniqueLastGrant] = React.useState<number>(0);
   const [techniqueToast, setTechniqueToast] = React.useState<string>("");
-  const [bronzeRemaining, setBronzeRemaining] = React.useState<number>(100);
-  const [ironRemaining, setIronRemaining] = React.useState<number>(100);
-  const [steelRemaining, setSteelRemaining] = React.useState<number>(100);
-  const [recipes, setRecipes] = React.useState<{ bronzeBar: boolean; ironBar: boolean; steelBar: boolean; bronzePick: boolean; ironPick: boolean }>({ bronzeBar: false, ironBar: false, steelBar: false, bronzePick: false, ironPick: false });
+  const [saveToast, setSaveToast] = React.useState<string>("");
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Reactive selectors: auto-update when state changes
+  // ─────────────────────────────────────────────────────────────────────────────
+  const gold = useSelector(game, select.resource(RES_GOLD).amount);
+  const xp = useSelector(game, select.resource(RES_XP).amount);
+  const copper = useSelector(game, select.resource(RES_ORE_COPPER).amount);
+  const tin = useSelector(game, select.resource(RES_ORE_TIN).amount);
+  const ironOre = useSelector(game, select.resource(RES_ORE_IRON).amount);
+  const coalOre = useSelector(game, select.resource(RES_ORE_COAL).amount);
+
+  const bronzeCount = useSelector(game, select.inventory(ITEM_BRONZE_PICK).count);
+  const ironCount = useSelector(game, select.inventory(ITEM_IRON_PICK).count);
+  const steelCount = useSelector(game, select.inventory(ITEM_STEEL_PICK).count);
+  const bronzeBarCount = useSelector(game, select.inventory(ITEM_BRONZE_BAR).count);
+  const ironBarCount = useSelector(game, select.inventory(ITEM_IRON_BAR).count);
+
+  const techniqueLevel = useSelector(game, select.upgrade(UP_TECH).level);
+  const hasTechnique = techniqueLevel > 0;
+  const level = levelFromXp(xp);
+
+  // Durability values from persisted passive settings
+  const bronzeRemaining = passive.durability.bronze;
+  const ironRemaining = passive.durability.iron;
+  const steelRemaining = passive.durability.steel;
+
+  // Durability setters that update the persisted state
+  const setBronzeRemaining = React.useCallback(
+    (action: React.SetStateAction<number>) => {
+      setPassive((p) => ({
+        ...p,
+        durability: {
+          ...p.durability,
+          bronze: typeof action === "function" ? action(p.durability.bronze) : action,
+        },
+      }));
+    },
+    [setPassive]
+  );
+  const setIronRemaining = React.useCallback(
+    (action: React.SetStateAction<number>) => {
+      setPassive((p) => ({
+        ...p,
+        durability: {
+          ...p.durability,
+          iron: typeof action === "function" ? action(p.durability.iron) : action,
+        },
+      }));
+    },
+    [setPassive]
+  );
+  const setSteelRemaining = React.useCallback(
+    (action: React.SetStateAction<number>) => {
+      setPassive((p) => ({
+        ...p,
+        durability: {
+          ...p.durability,
+          steel: typeof action === "function" ? action(p.durability.steel) : action,
+        },
+      }));
+    },
+    [setPassive]
+  );
 
   const RECIPE_UNLOCK = {
     bronzeBar: { gold: 1500, level: 3 },
@@ -139,10 +427,6 @@ export function App(): JSX.Element {
     bronzePick: { gold: 500, level: 3 },
     ironPick: { gold: 10000, level: 7 },
   } as const;
-
-  const countItem = React.useCallback((id: ItemId): number => {
-    return state.inventory.reduce((acc, e) => acc + (e.id === id ? e.count : 0), 0);
-  }, [state.inventory]);
 
   const spendGoldAnd = React.useCallback((cost: number, action: () => void): void => {
     const gs = game.accessor.getState();
@@ -174,21 +458,21 @@ export function App(): JSX.Element {
     refresh();
   }, [game, refresh]);
 
-  const applyMinedAndDurability = React.useCallback((itemId: ItemId, minedDelta: number, getRemaining: () => number, setRemaining: (n: number) => void): void => {
+  const applyMinedAndDurability = React.useCallback((itemId: ItemId, minedDelta: number, getRemaining: () => number, setRemaining: React.Dispatch<React.SetStateAction<number>>): void => {
     if (minedDelta <= 0) return;
     setRemaining((prev) => {
       let remaining = prev;
       // If no picks, keep remaining at 100 baseline
-      const count = state.inventory.reduce((acc, e) => acc + (e.id === itemId ? e.count : 0), 0);
+      const count = game.store.get(select.inventory(itemId).count);
       if (count <= 0) return 100;
       remaining -= minedDelta;
-      while (remaining <= 0 && state.inventory.reduce((acc, e) => acc + (e.id === itemId ? e.count : 0), 0) > 0) {
+      while (remaining <= 0 && game.store.get(select.inventory(itemId).count) > 0) {
         decrementItem(itemId);
         remaining += 100;
       }
       return Math.min(100, remaining);
     });
-  }, [state.inventory, decrementItem]);
+  }, [game, decrementItem]);
 
   React.useEffect(() => {
     const onUpgrade = (e: Extract<EngineEvent, { type: "upgradeApplied" }>): void => {
@@ -215,22 +499,22 @@ export function App(): JSX.Element {
 
         let lastGrant = 0;
         if (hasTechniqueUp) {
-          if (passive === "copper" && bronzeCount > 0) {
+          if (passive.target === "copper" && bronzeCount > 0) {
             const amt = bronzeCount * techniqueRatePerPick.copper * dt;
             lastGrant = amt;
             game.grantResource({ resourceId: RES_ORE_COPPER, amount: amt });
             applyMinedAndDurability(ITEM_BRONZE_PICK, amt, () => bronzeRemaining, setBronzeRemaining);
-          } else if (passive === "tin" && bronzeCount > 0) {
+          } else if (passive.target === "tin" && bronzeCount > 0) {
             const amt = bronzeCount * techniqueRatePerPick.tin * dt;
             lastGrant = amt;
             game.grantResource({ resourceId: RES_ORE_TIN, amount: amt });
             applyMinedAndDurability(ITEM_BRONZE_PICK, amt, () => bronzeRemaining, setBronzeRemaining);
-          } else if (passive === "iron" && ironCount > 0) {
+          } else if (passive.target === "iron" && ironCount > 0) {
             const amt = ironCount * techniqueRatePerPick.iron * dt;
             lastGrant = amt;
             game.grantResource({ resourceId: RES_ORE_IRON, amount: amt });
             applyMinedAndDurability(ITEM_IRON_PICK, amt, () => ironRemaining, setIronRemaining);
-          } else if (passive === "coal" && steelCount > 0) {
+          } else if (passive.target === "coal" && steelCount > 0) {
             const amt = steelCount * techniqueRatePerPick.coal * dt;
             lastGrant = amt;
             game.grantResource({ resourceId: RES_ORE_COAL, amount: amt });
@@ -259,20 +543,7 @@ export function App(): JSX.Element {
     };
   }, [game, passive, running, refresh, applyMinedAndDurability]);
 
-  const amount = (id: ResourceId): number => Number((state.resources.find((r: { id: ResourceId; amount: Quantity }) => r.id === id)?.amount as unknown as number) ?? 0);
-  const xp = amount(RES_XP);
-  const level = levelFromXp(xp);
-  const gold = amount(RES_GOLD);
-  const copper = amount(RES_ORE_COPPER);
-  const tin = amount(RES_ORE_TIN);
-  const ironOre = amount(RES_ORE_IRON);
-  const coalOre = amount(RES_ORE_COAL);
-  const hasTechnique = (state.upgrades.find((u) => u.id === UP_TECH)?.level ?? 0) > 0;
-
-  const bronzeCount = countItem(ITEM_BRONZE_PICK);
-  const ironCount = countItem(ITEM_IRON_PICK);
-  const steelCount = countItem(ITEM_STEEL_PICK);
-
+  // Derived visibility flags
   const canSeeIronTier = level >= 5;
   const canSeeSteelTier = level >= 10;
   const canPassiveCopper = hasTechnique && canSeeIronTier;
@@ -280,14 +551,14 @@ export function App(): JSX.Element {
   const canPassiveIron = hasTechnique && canSeeSteelTier;
 
   React.useEffect(() => {
-    if ((passive === "copper" || passive === "tin") && !canSeeIronTier) {
+    if ((passive.target === "copper" || passive.target === "tin") && !canSeeIronTier) {
       // fallback: none available, keep as copper but no passive will apply until unlocked
-      setPassive("copper");
-    } else if (passive === "iron" && !canPassiveIron) {
-      if (canPassiveTin) setPassive("tin");
-      else if (canPassiveCopper) setPassive("copper");
+      setPassive((p) => ({ ...p, target: "copper" }));
+    } else if (passive.target === "iron" && !canPassiveIron) {
+      if (canPassiveTin) setPassive((p) => ({ ...p, target: "tin" }));
+      else if (canPassiveCopper) setPassive((p) => ({ ...p, target: "copper" }));
     }
-  }, [passive, canPassiveCopper, canPassiveTin, canPassiveIron, canSeeIronTier]);
+  }, [passive.target, canPassiveCopper, canPassiveTin, canPassiveIron, canSeeIronTier, setPassive]);
 
   const buyBronzeCost = 10;
   const buyIronCost = 150;
@@ -299,8 +570,7 @@ export function App(): JSX.Element {
 
   const craftIronBar = (): void => {
     // Cost: 25 iron ore
-    const ore = amount(RES_ORE_IRON);
-    if (ore < 25) return;
+    if (ironOre < 25) return;
     const ok = consumeResourceLocal(RES_ORE_IRON, 25);
     if (!ok) return;
     game.addItems(ITEM_IRON_BAR, 1);
@@ -308,9 +578,7 @@ export function App(): JSX.Element {
   };
   const craftSteelBar = (): void => {
     // Cost: 50 iron ore + 25 coal
-    const ore = amount(RES_ORE_IRON);
-    const coal = amount(RES_ORE_COAL);
-    if (ore < 50 || coal < 25) return;
+    if (ironOre < 50 || coalOre < 25) return;
     // Consume both resources atomically (best-effort ordering)
     const okIron = consumeResourceLocal(RES_ORE_IRON, 50);
     if (!okIron) return;
@@ -325,8 +593,7 @@ export function App(): JSX.Element {
   };
   const craftIronPick = (): void => {
     // Cost: 2 iron bars
-    const bars = state.inventory.reduce((acc, e) => acc + (e.id === ITEM_IRON_BAR ? e.count : 0), 0);
-    if (bars < 2) return;
+    if (ironBarCount < 2) return;
     game.consumeItems(ITEM_IRON_BAR, 2);
     game.addItems(ITEM_IRON_PICK, 1);
     refresh();
@@ -521,17 +788,17 @@ export function App(): JSX.Element {
         <Row>
           {canPassiveCopper && (
             <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <input type="radio" name="focus" checked={passive === "copper"} onChange={(): void => setPassive("copper")} /> Copper
+              <input type="radio" name="focus" checked={passive.target === "copper"} onChange={(): void => setPassive((p) => ({ ...p, target: "copper" }))} /> Copper
             </label>
           )}
           {canPassiveTin && (
             <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <input type="radio" name="focus" checked={passive === "tin"} onChange={(): void => setPassive("tin")} /> Tin
+              <input type="radio" name="focus" checked={passive.target === "tin"} onChange={(): void => setPassive((p) => ({ ...p, target: "tin" }))} /> Tin
             </label>
           )}
           {canPassiveIron && (
             <label style={{ display: "flex", alignItems: "center", gap: 6 }}>
-              <input type="radio" name="focus" checked={passive === "iron"} onChange={(): void => setPassive("iron")} /> Iron
+              <input type="radio" name="focus" checked={passive.target === "iron"} onChange={(): void => setPassive((p) => ({ ...p, target: "iron" }))} /> Iron
             </label>
           )}
           {!canPassiveCopper && !canPassiveTin && !canPassiveIron && (
@@ -544,14 +811,14 @@ export function App(): JSX.Element {
             Status: {hasTechnique ? (
               <>
                 Active — +{(
-                  passive === "copper"
+                  passive.target === "copper"
                     ? (bronzeCount * 0.15)
-                    : passive === "tin"
+                    : passive.target === "tin"
                     ? (bronzeCount * 0.15)
-                    : passive === "iron"
+                    : passive.target === "iron"
                     ? (ironCount * 0.25)
                     : (steelCount * 0.4)
-                ).toFixed(2)} {passive} ore/sec
+                ).toFixed(2)} {passive.target} ore/sec
               </>
             ) : (
               <>Locked</>
@@ -559,7 +826,7 @@ export function App(): JSX.Element {
           </span>
           <span style={{ width: 12 }} />
           <span className="muted" style={{ opacity: 0.75 }}>
-            Last tick: {techniqueLastGrant.toFixed(2)} {passive}
+            Last tick: {techniqueLastGrant.toFixed(2)} {passive.target}
           </span>
           <span style={{ width: 8 }} />
           <Button onClick={(): void => { if (!hasTechnique && gold >= 50) { game.applyUpgrade({ upgradeId: UP_TECH, costResourceId: RES_GOLD, cost: 50 }); } }} style={hasTechnique || gold < 50 ? { opacity: 0.6, pointerEvents: "none" } : {}}>
@@ -665,13 +932,13 @@ export function App(): JSX.Element {
               </Button>
             ) : (
               <Button
-                onClick={(): void => { const bars = state.inventory.reduce((a,e)=>a+(e.id===ITEM_BRONZE_BAR?e.count:0),0); if (bars>=2){ game.consumeItems(ITEM_BRONZE_BAR,2); game.addItems(ITEM_BRONZE_PICK,1); refresh(); } }}
-                style={disabledStyle(state.inventory.reduce((a,e)=>a+(e.id===ITEM_BRONZE_BAR?e.count:0),0) < 2)}
+                onClick={(): void => { if (bronzeBarCount >= 2) { game.consumeItems(ITEM_BRONZE_BAR, 2); game.addItems(ITEM_BRONZE_PICK, 1); refresh(); } }}
+                style={disabledStyle(bronzeBarCount < 2)}
               >
                 Craft 1
               </Button>
             )}
-            <span className="muted" style={{ opacity: 0.75 }}>Stock: Bronze Bars {state.inventory.reduce((a,e)=>a+(e.id===ITEM_BRONZE_BAR?e.count:0),0)}</span>
+            <span className="muted" style={{ opacity: 0.75 }}>Stock: Bronze Bars {bronzeBarCount}</span>
           </div>
         </Row>
         <Row>
@@ -687,10 +954,30 @@ export function App(): JSX.Element {
                 Unlock Recipe ({RECIPE_UNLOCK.ironPick.gold}g) — Req L{RECIPE_UNLOCK.ironPick.level}
               </Button>
             ) : (
-              <Button onClick={craftIronPick} style={disabledStyle(state.inventory.reduce((acc, e) => acc + (e.id === ITEM_IRON_BAR ? e.count : 0), 0) < 2)}>Craft 1</Button>
+              <Button onClick={craftIronPick} style={disabledStyle(ironBarCount < 2)}>Craft 1</Button>
             )}
-            <span className="muted" style={{ opacity: 0.75 }}>Stock: Iron Bars {state.inventory.reduce((acc, e) => acc + (e.id === ITEM_IRON_BAR ? e.count : 0), 0)}</span>
+            <span className="muted" style={{ opacity: 0.75 }}>Stock: Iron Bars {ironBarCount}</span>
           </div>
+        </Row>
+      </Section>
+
+      <Section title="Save / Load">
+        <div className="muted" style={{ opacity: 0.75, marginBottom: 6 }}>
+          Your progress is saved to localStorage. The engine supports schema migrations for older saves.
+        </div>
+        {lastMigration?.migrated && (
+          <div style={{ background: "#1a2f4a", border: "1px solid #3a5f8a", color: "#a0c8ff", borderRadius: 6, padding: 8, marginBottom: 8 }}>
+            Save migrated: v{lastMigration.versionPath[0]} → v{lastMigration.versionPath.at(-1)}
+          </div>
+        )}
+        {saveToast && (
+          <div style={{ background: "#12381f", border: "1px solid #1f6b3a", color: "#b5f2c8", borderRadius: 6, padding: 8, marginBottom: 8 }}>
+            {saveToast}
+          </div>
+        )}
+        <Row>
+          <Button onClick={(): void => { save(); setSaveToast("Game saved!"); setTimeout(() => setSaveToast(""), 2000); }}>Save Game</Button>
+          <Button onClick={clearSave} style={{ background: "#3b2020", borderColor: "#5a3030" }}>Clear Save</Button>
         </Row>
       </Section>
 

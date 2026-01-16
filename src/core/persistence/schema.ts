@@ -35,6 +35,7 @@ export const SaveV1Schema = z.object({
     generators: z.array(GeneratorStateSchema),
     inventory: z.array(InventoryEntrySchema),
     upgrades: z.array(UpgradeStateSchema),
+    custom: z.record(z.unknown()).optional(),
   }),
 });
 

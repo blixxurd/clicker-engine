@@ -9,6 +9,7 @@ import type { BuyGeneratorArgs, ApplyUpgradeArgs, SellResourceArgs, SellItemsArg
 import { TickRunner } from "./TickRunner";
 import type { ItemIdLike, TaskIdLike, ItemId, TaskId, ResourceId } from "../types/core";
 import { PersistenceManager, SystemClock, type Clock } from "./PersistenceManager";
+import { createStateStore, type StateStoreResult, type StateStoreOptions } from "../reactive";
 
 /**
  * Game-scoped façade bundling state, event bus, and domain subsystems.
@@ -21,19 +22,46 @@ import { PersistenceManager, SystemClock, type Clock } from "./PersistenceManage
 export class Game {
   public readonly accessor: StateAccessor;
   public readonly bus: EventBus;
+  /**
+   * Reactive state store for subscribing to specific state value changes.
+   *
+   * @example
+   * ```typescript
+   * import { select } from "@fidget/idle-engine";
+   *
+   * // Subscribe to gold amount changes
+   * game.store.subscribe(
+   *   select.resource("gold").amount,
+   *   (gold, prev) => console.log(`Gold: ${prev} -> ${gold}`)
+   * );
+   * ```
+   */
+  public readonly store: StateStoreResult;
   public readonly inventory: InventoryManager;
   public readonly tasks: TaskManager;
   public readonly economy: Economy;
   public readonly tick: TickRunner;
   public readonly persistence: PersistenceManager;
 
-  public constructor(initialState: GameState, registries: Registries, clock: Clock = new SystemClock()) {
+  public constructor(
+    initialState: GameState,
+    registries: Registries,
+    clock: Clock = new SystemClock(),
+    storeOptions?: StateStoreOptions
+  ) {
     let state = initialState;
-    this.accessor = {
+    const baseAccessor: StateAccessor = {
       getState: (): GameState => state,
       setState: (next: GameState): void => { state = next; },
     };
+
     this.bus = createEventBus();
+
+    // Create reactive store, wrapping the accessor
+    this.store = createStateStore(baseAccessor, storeOptions);
+    // Use wrapped accessor so state changes trigger subscriptions
+    this.accessor = this.store.accessor;
+
     this.inventory = new InventoryManager(this.accessor, registries);
     this.tasks = new TaskManager(this.accessor, registries);
     this.economy = new Economy(this.accessor, registries);
@@ -92,6 +120,51 @@ export class Game {
     events.forEach((e) => this.bus.emit(e));
     return events;
   }
+
+  // ============================================================================
+  // Throwing variants - throw typed errors instead of silent no-op
+  // ============================================================================
+
+  /**
+   * Buy generators or throw if operation cannot complete.
+   * @throws GeneratorNotFoundError, ResourceNotFoundError, InsufficientResourceError
+   */
+  public buyGeneratorsOrThrow(args: BuyGeneratorArgs): ReadonlyArray<EngineEvent> {
+    const events = this.economy.buyGeneratorsOrThrow(args);
+    events.forEach((e) => this.bus.emit(e));
+    return events;
+  }
+
+  /**
+   * Apply upgrade or throw if operation cannot complete.
+   * @throws ResourceNotFoundError, InsufficientResourceError
+   */
+  public applyUpgradeOrThrow(args: ApplyUpgradeArgs): ReadonlyArray<EngineEvent> {
+    const events = this.economy.applyUpgradeOrThrow(args);
+    events.forEach((e) => this.bus.emit(e));
+    return events;
+  }
+
+  /**
+   * Grant resource or throw if operation cannot complete.
+   * @throws ResourceNotFoundError, InvalidQuantityError
+   */
+  public grantResourceOrThrow(args: GrantResourceArgs): ReadonlyArray<EngineEvent> {
+    const events = this.economy.grantResourceOrThrow(args);
+    events.forEach((e) => this.bus.emit(e));
+    return events;
+  }
+
+  /**
+   * Consume resource or throw if operation cannot complete.
+   * @throws ResourceNotFoundError, InvalidQuantityError, InsufficientResourceError
+   */
+  public consumeResourceOrThrow(args: ConsumeResourceArgs): ReadonlyArray<EngineEvent> {
+    const events = this.economy.consumeResourceOrThrow(args);
+    events.forEach((e) => this.bus.emit(e));
+    return events;
+  }
+
   public claimTask(taskId: TaskIdLike): ReadonlyArray<EngineEvent> {
     const events = this.tasks.claim(taskId as TaskId);
     events.forEach((e) => this.bus.emit(e));

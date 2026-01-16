@@ -5,6 +5,12 @@ import type { Quantity, GeneratorId, ItemId } from "../types/core";
 import type { BulkMode } from "../core/math/bulk";
 import { planPurchase } from "../core/math/bulk";
 import { InventoryService } from "./InventoryService";
+import {
+  InsufficientResourceError,
+  GeneratorNotFoundError,
+  ResourceNotFoundError,
+  InvalidQuantityError,
+} from "../errors/EconomyError";
 
 /** Purchase parameters for generators. */
 export interface BuyGeneratorArgs {
@@ -180,6 +186,130 @@ export class EconomyService {
     if (idx < 0 || args.amount <= 0) return { state: state as GameState, events: [] };
     const curr = state.resources[idx]!.amount as unknown as number;
     if (curr < args.amount) return { state: state as GameState, events: [] };
+    const nextAmt = EconomyService.q(curr - args.amount);
+    const next: GameState = { ...state, resources: state.resources.map((r, i) => (i === idx ? { ...r, amount: nextAmt } : r)) } as GameState;
+    return { state: next, events: [{ type: "resourceDelta", resourceId: state.resources[idx]!.id, delta: -args.amount } as EngineEvent] };
+  }
+
+  // ============================================================================
+  // Throwing variants - same logic but throw typed errors instead of silent no-op
+  // ============================================================================
+
+  /**
+   * Like buyGenerators but throws typed errors on failure.
+   * @throws GeneratorNotFoundError if generator or pricing not found
+   * @throws ResourceNotFoundError if cost resource not in state
+   * @throws InsufficientResourceError if not enough currency
+   */
+  public static buyGeneratorsOrThrow(
+    state: Readonly<GameState>,
+    args: BuyGeneratorArgs,
+    registries: Registries
+  ): { state: GameState; events: ReadonlyArray<EngineEvent> } {
+    const generatorId = args.generatorId as unknown as GeneratorId;
+    const def = registries.generators.get(generatorId);
+    const pricing = def?.pricing;
+    if (!pricing) {
+      throw new GeneratorNotFoundError(generatorId);
+    }
+    const resIdx = state.resources.findIndex((r) => r.id === pricing.costResourceId);
+    if (resIdx < 0) {
+      throw new ResourceNotFoundError(pricing.costResourceId);
+    }
+    const currency = state.resources[resIdx]!.amount as unknown as number;
+    const plan = planPurchase(args.mode, currency, pricing.baseCost, pricing.growth);
+    if (plan.count <= 0 || plan.cost <= 0) {
+      throw new InsufficientResourceError(pricing.costResourceId, pricing.baseCost, currency);
+    }
+    const updatedResources = state.resources.map((r, i) =>
+      i === resIdx ? { ...r, amount: EconomyService.q((r.amount as unknown as number) - plan.cost) } : r
+    );
+    const genIdx = state.generators.findIndex((g) => g.id === generatorId);
+    const updatedGenerators =
+      genIdx >= 0
+        ? state.generators.map((g, i) => (i === genIdx ? { ...g, owned: g.owned + plan.count } : g))
+        : [...state.generators, { id: generatorId, owned: plan.count }];
+    const next: GameState = { ...state, resources: updatedResources, generators: updatedGenerators } as GameState;
+    const events: EngineEvent[] = [
+      { type: "generatorPurchase", generatorId: generatorId, count: plan.count, costResourceId: pricing.costResourceId, cost: plan.cost } as EngineEvent,
+      { type: "resourceDelta", resourceId: pricing.costResourceId, delta: -plan.cost } as EngineEvent,
+    ];
+    return { state: next, events };
+  }
+
+  /**
+   * Like applyUpgrade but throws typed errors on failure.
+   * @throws ResourceNotFoundError if cost resource not in state
+   * @throws InsufficientResourceError if not enough currency
+   */
+  public static applyUpgradeOrThrow(
+    state: Readonly<GameState>,
+    args: ApplyUpgradeArgs
+  ): { state: GameState; events: ReadonlyArray<EngineEvent> } {
+    const { upgradeId, costResourceId, cost } = args;
+    const resIdx = state.resources.findIndex((r) => r.id === costResourceId);
+    if (resIdx < 0) {
+      throw new ResourceNotFoundError(costResourceId);
+    }
+    const currency = state.resources[resIdx]!.amount as unknown as number;
+    if (currency < cost) {
+      throw new InsufficientResourceError(costResourceId, cost, currency);
+    }
+    const updatedResources = state.resources.map((r, i) => (i === resIdx ? { ...r, amount: EconomyService.q(currency - cost) } : r));
+    const upIdx = state.upgrades.findIndex((u) => u.id === upgradeId);
+    const updatedUpgrades =
+      upIdx >= 0 ? state.upgrades.map((u, i) => (i === upIdx ? { ...u, level: u.level + 1 } : u)) : [...state.upgrades, { id: upgradeId, level: 1 }];
+    const next: GameState = { ...state, resources: updatedResources, upgrades: updatedUpgrades } as GameState;
+    const events: EngineEvent[] = [
+      { type: "upgradeApplied", upgradeId, newLevel: upIdx >= 0 ? state.upgrades[upIdx]!.level + 1 : 1, costResourceId, cost } as EngineEvent,
+      { type: "resourceDelta", resourceId: costResourceId, delta: -cost } as EngineEvent,
+    ];
+    return { state: next, events };
+  }
+
+  /**
+   * Like grantResource but throws typed errors on failure.
+   * @throws ResourceNotFoundError if resource not in state
+   * @throws InvalidQuantityError if amount is <= 0
+   */
+  public static grantResourceOrThrow(
+    state: Readonly<GameState>,
+    args: GrantResourceArgs
+  ): { state: GameState; events: ReadonlyArray<EngineEvent> } {
+    if (args.amount <= 0) {
+      throw new InvalidQuantityError(args.amount, "Amount must be positive");
+    }
+    const idx = state.resources.findIndex((r) => r.id === args.resourceId);
+    if (idx < 0) {
+      throw new ResourceNotFoundError(args.resourceId);
+    }
+    const curr = state.resources[idx]!.amount as unknown as number;
+    const nextAmt = EconomyService.q(curr + args.amount);
+    const next: GameState = { ...state, resources: state.resources.map((r, i) => (i === idx ? { ...r, amount: nextAmt } : r)) } as GameState;
+    return { state: next, events: [{ type: "resourceDelta", resourceId: state.resources[idx]!.id, delta: args.amount } as EngineEvent] };
+  }
+
+  /**
+   * Like consumeResource but throws typed errors on failure.
+   * @throws ResourceNotFoundError if resource not in state
+   * @throws InvalidQuantityError if amount is <= 0
+   * @throws InsufficientResourceError if not enough to consume
+   */
+  public static consumeResourceOrThrow(
+    state: Readonly<GameState>,
+    args: ConsumeResourceArgs
+  ): { state: GameState; events: ReadonlyArray<EngineEvent> } {
+    if (args.amount <= 0) {
+      throw new InvalidQuantityError(args.amount, "Amount must be positive");
+    }
+    const idx = state.resources.findIndex((r) => r.id === args.resourceId);
+    if (idx < 0) {
+      throw new ResourceNotFoundError(args.resourceId);
+    }
+    const curr = state.resources[idx]!.amount as unknown as number;
+    if (curr < args.amount) {
+      throw new InsufficientResourceError(args.resourceId, args.amount, curr);
+    }
     const nextAmt = EconomyService.q(curr - args.amount);
     const next: GameState = { ...state, resources: state.resources.map((r, i) => (i === idx ? { ...r, amount: nextAmt } : r)) } as GameState;
     return { state: next, events: [{ type: "resourceDelta", resourceId: state.resources[idx]!.id, delta: -args.amount } as EngineEvent] };

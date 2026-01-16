@@ -87,6 +87,54 @@ export class Economy extends BaseSubsystem {
     if (state !== curr) this.state.setState(state);
     return events;
   }
+
+  // ============================================================================
+  // Throwing variants - throw typed errors instead of silent no-op
+  // ============================================================================
+
+  /**
+   * Buy generators or throw if operation cannot complete.
+   * @throws GeneratorNotFoundError, ResourceNotFoundError, InsufficientResourceError
+   */
+  public buyGeneratorsOrThrow(args: BuyGeneratorArgs): ReadonlyArray<EngineEvent> {
+    const curr = this.state.getState();
+    const { state, events } = EconomyService.buyGeneratorsOrThrow(curr, args, this.registries);
+    this.state.setState(state);
+    return events;
+  }
+
+  /**
+   * Apply upgrade or throw if operation cannot complete.
+   * @throws ResourceNotFoundError, InsufficientResourceError
+   */
+  public applyUpgradeOrThrow(args: ApplyUpgradeArgs): ReadonlyArray<EngineEvent> {
+    const curr = this.state.getState();
+    const { state, events } = EconomyService.applyUpgradeOrThrow(curr, args);
+    this.state.setState(state);
+    return events;
+  }
+
+  /**
+   * Grant resource or throw if operation cannot complete.
+   * @throws ResourceNotFoundError, InvalidQuantityError
+   */
+  public grantResourceOrThrow(args: GrantResourceArgs): ReadonlyArray<EngineEvent> {
+    const curr = this.state.getState();
+    const { state, events } = EconomyService.grantResourceOrThrow(curr, args);
+    this.state.setState(state);
+    return events;
+  }
+
+  /**
+   * Consume resource or throw if operation cannot complete.
+   * @throws ResourceNotFoundError, InvalidQuantityError, InsufficientResourceError
+   */
+  public consumeResourceOrThrow(args: ConsumeResourceArgs): ReadonlyArray<EngineEvent> {
+    const curr = this.state.getState();
+    const { state, events } = EconomyService.consumeResourceOrThrow(curr, args);
+    this.state.setState(state);
+    return events;
+  }
 }
 
 // Re-export types for convenience

@@ -13,6 +13,17 @@ export type {
 } from "./types/core";
 export type { GameState } from "./model/gameState";
 
+// Type helper functions for creating branded types without casting
+export {
+  resourceId,
+  generatorId,
+  itemId,
+  upgradeId,
+  taskId,
+  qty,
+  rps,
+} from "./types/helpers";
+
 // Tick services and controllers
 export { TickService } from "./service/TickService";
 export { TickRunner } from "./controller/TickRunner";
@@ -49,8 +60,18 @@ export type { Registries, ResourceRegistry, GeneratorRegistry, ItemRegistry, Upg
 export { createInMemoryResourceRegistry, createInMemoryGeneratorRegistry, createInMemoryItemRegistry, createInMemoryUpgradeRegistry, createInMemoryTaskRegistry } from "./repo/registries";
 
 // Persistence
-export { CURRENT_SCHEMA_VERSION, serialize, parse, applyOfflineProgress, parseWithOffline } from "./core/persistence";
-export { PersistenceError, InvalidJsonError, ValidationError, UnsupportedVersionError } from "./errors/PersistenceError";
+export { CURRENT_SCHEMA_VERSION, MIN_SUPPORTED_VERSION, serialize, parse, applyOfflineProgress, parseWithOffline, parseWithMigrationInfo, createMigrationRegistry } from "./core/persistence";
+export type { ParseWithMigrationResult, MigrationResult, VersionedSave, Migration, ErasedMigration } from "./core/persistence";
+export { PersistenceError, InvalidJsonError, ValidationError, UnsupportedVersionError, MigrationPathError, MigrationError } from "./errors/PersistenceError";
+export {
+  EconomyError,
+  InsufficientResourceError,
+  GeneratorNotFoundError,
+  ItemNotFoundError,
+  ResourceNotFoundError,
+  UpgradeNotFoundError,
+  InvalidQuantityError,
+} from "./errors/EconomyError";
 
 // Controllers
 export { Economy, type BuyGeneratorArgs, type ApplyUpgradeArgs, type SellResourceArgs, type SellItemsArgs, type GrantResourceArgs, type ConsumeResourceArgs } from "./controller/Economy";
@@ -58,6 +79,22 @@ export { TaskManager } from "./controller/TaskManager";
 export { TaskService } from "./service/TaskService";
 export type { StateAccessor } from "./controller/StateAccessor";
 export { PersistenceManager, SystemClock, type Clock } from "./controller/PersistenceManager";
+
+// Reactive state subscriptions
+export { select, createSelector, createStateStore, shallowEqual } from "./reactive";
+export type {
+  Selector,
+  SubscriptionCallback,
+  Unsubscribe,
+  StateStore,
+  StateStoreOptions,
+  StateStoreResult,
+  ResourceSelector,
+  GeneratorSelector,
+  InventorySelector,
+  UpgradeSelector,
+  TaskSelector,
+} from "./reactive";
 
 // Main entry point
 export { Game } from "./controller/Game";

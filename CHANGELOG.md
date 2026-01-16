@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0] - 2026-01-15
+
+### Added
+- Schema migration system for save file versioning
+  - `MigrationRegistry` class for registering and executing chained migrations (v1→v2→...→vN)
+  - `parseWithMigrationInfo()` returns migration metadata (path, whether migrated)
+  - `MigrationPathError` and `MigrationError` for typed error handling
+  - Migration infrastructure in `src/core/persistence/migration/`
+- Reactive state subscription system
+  - `select` factory for type-safe selectors (`select.resource()`, `select.generator()`, etc.)
+  - `createStateStore()` for subscribing to state changes without polling
+  - `createSelector()` for derived/composed selectors
+  - Batching support with `flushOn: EventBus` integration for game loop efficiency
+  - `Game.store` property for built-in reactive subscriptions
+- Type helper functions: `resourceId()`, `generatorId()`, `itemId()`, `upgradeId()`, `taskId()`, `qty()`, `rps()`
+- Economy error classes: `InsufficientResourceError`, `GeneratorNotFoundError`, `ResourceNotFoundError`, `ItemNotFoundError`, `UpgradeNotFoundError`, `InvalidQuantityError`
+- Throwing variants on `Game`: `buyGeneratorsOrThrow()`, `applyUpgradeOrThrow()`, `grantResourceOrThrow()`, `consumeResourceOrThrow()`
+- Exported `MIN_SUPPORTED_VERSION` constant
+- Exported migration types: `Migration`, `MigrationResult`, `VersionedSave`, `ErasedMigration`
+
+### Fixed
+- Added `coverage/**` to ESLint ignore patterns
+
 ## [0.1.0] - Initial MVP scaffold
 - Project configuration (TypeScript, ESLint, Prettier, tsup)
 - Minimal src structure and public types
